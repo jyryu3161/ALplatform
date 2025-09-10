@@ -45,7 +45,7 @@ dependencies:
   - pip:
     - oddt==0.7
     - biopython==1.81
-    - autodock-vina==1.2.3
+    - vina==1.2.7
   
 # CUDA version (uncomment if GPU support is needed)
 # For CUDA 11.6:
