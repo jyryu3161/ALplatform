@@ -11,7 +11,7 @@ echo "원클릭 서버 설치 스크립트"
 echo "=========================================="
 echo ""
 
-# 진행 상황 표시 함수
+# 진행 상황 표시 함수  
 progress() {
     echo "[$(date '+%H:%M:%S')] ✓ $1"
 }
@@ -19,6 +19,36 @@ progress() {
 error() {
     echo "[$(date '+%H:%M:%S')] ✗ 오류: $1"
     exit 1
+}
+
+warning() {
+    echo "[$(date '+%H:%M:%S')] ⚠ 경고: $1"
+}
+
+# CUDA 감지 함수
+check_cuda() {
+    echo "   CUDA 감지 중..."
+    
+    # nvidia-smi로 CUDA 확인
+    if command -v nvidia-smi &> /dev/null; then
+        CUDA_VERSION=$(nvidia-smi 2>/dev/null | grep -oP "CUDA Version: \K[0-9]+\.[0-9]+")
+        if [ ! -z "$CUDA_VERSION" ]; then
+            progress "CUDA $CUDA_VERSION 감지됨 - GPU 가속 환경 사용"
+            return 0
+        fi
+    fi
+    
+    # nvcc로 CUDA 확인
+    if command -v nvcc &> /dev/null; then
+        NVCC_VERSION=$(nvcc --version 2>/dev/null | grep -oP "release \K[0-9]+\.[0-9]+")
+        if [ ! -z "$NVCC_VERSION" ]; then
+            progress "NVCC $NVCC_VERSION 감지됨 - GPU 가속 환경 사용"
+            return 0
+        fi
+    fi
+    
+    warning "CUDA가 감지되지 않음 - CPU 전용 환경 사용"
+    return 1
 }
 
 # 1. 시스템 요구사항 확인
@@ -70,6 +100,15 @@ fi
 echo ""
 echo "3. 프로젝트 환경 생성 중..."
 
+# CUDA 지원 여부 확인
+if check_cuda; then
+    ENV_FILE="environment.yml"
+    echo "   GPU 가속 환경 설정 파일 사용: $ENV_FILE"
+else
+    ENV_FILE="environment-cpu.yml"
+    echo "   CPU 전용 환경 설정 파일 사용: $ENV_FILE"
+fi
+
 # 기존 환경이 있으면 제거
 if conda env list | grep -q "active-learning-docking"; then
     echo "   기존 환경 제거 중..."
@@ -77,8 +116,14 @@ if conda env list | grep -q "active-learning-docking"; then
 fi
 
 # 새 환경 생성
-conda env create -f environment.yml
-progress "Conda 환경 'active-learning-docking' 생성 완료"
+echo "   환경 생성 중 (몇 분 소요될 수 있습니다)..."
+conda env create -f $ENV_FILE
+
+if [ $? -eq 0 ]; then
+    progress "Conda 환경 'active-learning-docking' 생성 완료"
+else
+    error "환경 생성 실패. $ENV_FILE 파일을 확인하세요."
+fi
 
 # 4. qVina2.1 설치 (AutoDock Vina보다 최대 20배 빠름)
 echo ""
@@ -124,12 +169,14 @@ else
     VINA_SUCCESS=false
 fi
 
-# 5. 필수 패키지 설치 확인
+# 5. 필수 패키지 설치 확인 및 CUDA 호환성 테스트
 echo ""
-echo "5. 패키지 설치 확인 중..."
+echo "5. 패키지 설치 확인 및 CUDA 호환성 테스트 중..."
 
 python -c "
 import sys
+
+# 필수 패키지 확인
 try:
     import torch
     import rdkit
@@ -141,9 +188,39 @@ try:
 except ImportError as e:
     print(f'✗ 패키지 오류: {e}')
     sys.exit(1)
+
+# PyTorch CUDA 호환성 테스트
+try:
+    print(f'✓ PyTorch 버전: {torch.__version__}')
+    
+    if torch.cuda.is_available():
+        print(f'✓ CUDA 사용 가능: {torch.version.cuda}')
+        print(f'✓ GPU 장치 수: {torch.cuda.device_count()}')
+        for i in range(torch.cuda.device_count()):
+            print(f'  - GPU {i}: {torch.cuda.get_device_name(i)}')
+        
+        # 간단한 CUDA 연산 테스트
+        try:
+            x = torch.randn(3, 3).cuda()
+            y = torch.randn(3, 3).cuda()
+            z = x + y
+            print('✓ CUDA 연산 테스트 성공')
+        except Exception as e:
+            print(f'⚠ CUDA 연산 테스트 실패: {e}')
+            print('  CPU 모드로 실행하세요')
+    else:
+        print('✓ CPU 전용 모드로 설정됨')
+        
+except Exception as e:
+    print(f'✗ PyTorch CUDA 테스트 오류: {e}')
+    sys.exit(1)
 "
 
-progress "패키지 설치 확인 완료"
+if [ $? -eq 0 ]; then
+    progress "패키지 설치 및 CUDA 호환성 확인 완료"
+else
+    error "패키지 또는 CUDA 호환성 문제 발생"
+fi
 
 # 6. 예제 데이터 확인
 echo ""

@@ -48,36 +48,48 @@ ActiveLearning_only_tabm/
 
 ## 🚀 Installation (5분 완료)
 
-### 원클릭 설치
+### 스마트 원클릭 설치
 
-새로운 서버에서 바로 실행 가능:
+새로운 서버에서 CUDA 자동 감지 및 설치:
 
 ```bash
 # 1. 프로젝트 클론
 git clone <YOUR_REPO_URL>
 cd ActiveLearning_only_tabm
 
-# 2. 원클릭 설치 (모든 의존성 자동 설치)
+# 2. 원클릭 설치 (CUDA 자동 감지, 모든 의존성 자동 설치)
 ./setup_server.sh
 
-# 3. 바로 실행
+# 3. 설치 검증 (권장)
+python test_installation.py
+
+# 4. 바로 실행
 conda activate active-learning-docking
 ./run_example.sh
 ```
 
-### 수동 설치 (필요시에만)
+### 🎯 CUDA 지원 최적화
+
+설치 스크립트가 자동으로 감지:
+- **GPU 서버**: CUDA 11.8 + GPU 가속 PyTorch 설치 (`environment.yml`)
+- **CPU 서버**: CPU 전용 PyTorch 설치 (`environment-cpu.yml`)
+- **호환성 테스트**: PyTorch/CUDA 연산 검증 및 문제 진단
+
+### 수동 설치 (고급 사용자)
 
 ```bash
-# Conda 환경 생성 (qVina2.1 포함)
+# GPU 서버용
 conda env create -f environment.yml
 conda activate active-learning-docking
 
-# qVina2.1 수동 설치 (더 빠른 성능)
+# CPU 전용 서버용  
+conda env create -f environment-cpu.yml
+conda activate active-learning-docking
+
+# qVina2.1 수동 설치
 wget https://github.com/QVina/qvina/raw/refs/heads/master/bin/qvina2.1
 chmod +x qvina2.1
 mkdir -p bin && mv qvina2.1 bin/
-
-# 또는 conda 패키지: conda install -c conda-forge qvina
 ```
 
 ### 🚀 qVina2.1 vs AutoDock Vina
@@ -90,9 +102,26 @@ mkdir -p bin && mv qvina2.1 bin/
 
 ## 🚨 문제 해결
 
-### 자주 발생하는 문제
+### CUDA 호환성 문제
 
-**설치 오류 시:**
+**PyTorch CUDA 오류 (libcublas 충돌 등):**
+```bash
+# 1. 설치 검증으로 문제 진단
+python test_installation.py
+
+# 2. CUDA 환경 재설치 (GPU 서버)
+conda env remove -n active-learning-docking
+./setup_server.sh
+
+# 3. CPU 전용으로 대안 설치
+conda env create -f environment-cpu.yml
+
+# 4. CUDA 버전 확인
+nvidia-smi
+nvcc --version
+```
+
+**일반적인 설치 오류:**
 ```bash
 # 권한 문제
 chmod +x setup_server.sh
@@ -101,21 +130,24 @@ chmod +x setup_server.sh
 conda clean --all
 conda update conda
 
-# 의존성 충돌
+# 완전 재설치
 conda env remove -n active-learning-docking
-./setup_server.sh  # 재설치
+./setup_server.sh
 ```
 
-**실행 오류 시:**
+**실행 시 문제:**
 ```bash
+# 상세 진단
+python test_installation.py
+
 # 로그 확인
 tail -f results/active_learning.log
 
-# 메모리 부족 시 작은 배치 사이즈 사용
-python main_refactored.py --config config.yml --batch_size 5
+# GPU 메모리 부족 시
+python main.py --device cpu --batch_size 5
 
-# GPU 문제 시 CPU 모드
-python main_refactored.py --config config.yml --device cpu
+# qVina2.1 실행 권한 오류
+chmod +x bin/qvina2.1
 ```
 
 ## Quick Start
@@ -282,19 +314,45 @@ Typical performance on drug discovery datasets:
 
 ## Troubleshooting
 
+### Installation Verification
+
+Always run the comprehensive test after installation:
+```bash
+python test_installation.py
+```
+
+This script tests:
+- Python environment and packages
+- CUDA compatibility and GPU operations  
+- Molecular libraries (RDKit, ODDT)
+- Docking tools (qVina2.1)
+- Project modules loading
+- Configuration files
+
 ### Common Issues
 
-1. **Missing qvina2.1**: Ensure binary is in `bin/qvina2.1` and executable
-2. **Memory errors**: Reduce `--batch_size` and `--batch_size_nn` 
-3. **Invalid SMILES**: Check compound database format and SMILES validity
-4. **GPU issues**: Use `--device cpu` to force CPU-only execution
+1. **CUDA/PyTorch Compatibility**: 
+   - Run `python test_installation.py` for diagnosis
+   - Use CPU fallback: `conda env create -f environment-cpu.yml`
+   
+2. **Missing qvina2.1**: 
+   - Auto-download: `./setup_server.sh` 
+   - Manual: `wget ...` (see installation guide)
+   
+3. **Memory errors**: 
+   - Reduce `--batch_size` and `--batch_size_nn`
+   - Monitor with `python test_installation.py`
+   
+4. **Invalid SMILES**: 
+   - Check database CSV format and SMILES validity
+   - Use built-in molecular filtering
 
-### Performance Tips
+### Performance Optimization
 
-1. **Use GPU**: Significantly faster training with CUDA-capable GPU
-2. **Enable auto-tuning**: `--auto_tune` for optimal hyperparameters
-3. **Adjust similarity thresholds**: Higher values for focused search
-4. **Monitor memory**: Watch `active_learning.log` for memory warnings
+1. **GPU Acceleration**: Test with `python test_installation.py`
+2. **Auto-tuning**: Use `--auto_tune` for optimal hyperparameters  
+3. **Memory Management**: Monitor `active_learning.log` for warnings
+4. **CUDA Diagnostics**: Comprehensive GPU testing and troubleshooting
 
 ## Citation
 
