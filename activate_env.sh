@@ -1,20 +1,31 @@
 #!/bin/bash
-# TabM Active Learning 프로젝트용 conda 환경 활성화 스크립트
+# Active Learning Molecular Docking 프로젝트용 conda 환경 활성화 스크립트
 
-echo "TabM Active Learning 환경을 활성화합니다..."
+echo "Active Learning 환경을 활성화합니다..."
 
-# Conda 초기화 (필요한 경우)
-if [ -f ~/anaconda3/bin/conda ]; then
-    source ~/anaconda3/bin/activate
-elif [ -f /data1/home/dyoh/anaconda3/bin/conda ]; then
-    source /data1/home/dyoh/anaconda3/bin/activate
+# Conda 초기화 (자동 감지)
+if command -v conda &> /dev/null; then
+    # conda 명령이 이미 사용 가능한 경우
+    eval "$(conda shell.bash hook)"
+elif [ -f ~/anaconda3/bin/conda ]; then
+    # 홈 디렉토리의 anaconda3
+    eval "$(~/anaconda3/bin/conda shell.bash hook)"
+elif [ -f ~/miniconda3/bin/conda ]; then
+    # 홈 디렉토리의 miniconda3
+    eval "$(~/miniconda3/bin/conda shell.bash hook)"
+elif [ -f /opt/conda/bin/conda ]; then
+    # 시스템 설치 conda
+    eval "$(/opt/conda/bin/conda shell.bash hook)"
 else
-    echo "Conda 설치를 찾을 수 없습니다."
+    echo "오류: Conda 설치를 찾을 수 없습니다."
+    echo "다음 중 하나를 실행하세요:"
+    echo "  - conda 설치 후 PATH에 추가"
+    echo "  - setup_server.sh 스크립트 사용"
     exit 1
 fi
 
-# tabm_env 환경 활성화
-source /data1/home/dyoh/anaconda3/bin/activate tabm_env
+# active-learning-docking 환경 활성화
+conda activate active-learning-docking
 
 # 환경 확인
 echo "현재 활성화된 환경: $(conda info --envs | grep '*' | awk '{print $1}')"

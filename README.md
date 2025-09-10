@@ -46,277 +46,77 @@ ActiveLearning_only_tabm/
 - **Memory Efficiency**: Automatic resource management
 - **Type Safety**: Full type hints throughout codebase
 
-## Installation
+## 🚀 Installation (5분 완료)
 
-### Prerequisites
+### 원클릭 설치
 
-- Python 3.8+
-- CUDA-capable GPU (recommended)
-- qvina2.1 binary (placed in `bin/qvina2.1`)
-
-### Dependencies
-
-Install using conda (recommended):
+새로운 서버에서 바로 실행 가능:
 
 ```bash
-conda env create -f environment.yml
-conda activate active-learning-docking
-```
-
-Or using pip:
-
-```bash
-pip install -r requirements.txt
-```
-
-### External Dependencies
-
-Download qvina2.1 binary:
-
-```bash
-wget https://github.com/QVina/qvina/releases/download/v2.1/qvina2.1-linux
-chmod +x qvina2.1-linux
-mkdir -p bin && mv qvina2.1-linux bin/qvina2.1
-```
-
-## 🚀 Server Deployment Guide
-
-### Quick Clone and Setup
-
-For immediate deployment on a new server:
-
-```bash
-# 1. Clone the repository
-git clone <YOUR_PRIVATE_REPO_URL>
+# 1. 프로젝트 클론
+git clone <YOUR_REPO_URL>
 cd ActiveLearning_only_tabm
 
-# 2. Run the automated setup script
-chmod +x activate_env.sh
-./activate_env.sh
+# 2. 원클릭 설치 (모든 의존성 자동 설치)
+./setup_server.sh
 
-# 3. Download qvina2.1 binary
-wget https://github.com/QVina/qvina/releases/download/v2.1/qvina2.1-linux
-chmod +x qvina2.1-linux
-mkdir -p bin && mv qvina2.1-linux bin/qvina2.1
-
-# 4. Test installation
-python test_installation.py
-
-# 5. Run example
+# 3. 바로 실행
+conda activate active-learning-docking
 ./run_example.sh
 ```
 
-### Step-by-Step Server Setup
+### 수동 설치 (필요시에만)
 
-#### 1. System Requirements
-
-- **OS**: Linux (Ubuntu 18.04+, CentOS 7+) or macOS 10.15+
-- **Python**: 3.8+ (3.9 recommended)
-- **Memory**: 8GB RAM minimum, 16GB+ recommended
-- **Disk**: 10GB+ free space for results and models
-- **Network**: Internet access for downloading dependencies
-
-#### 2. Environment Setup Options
-
-**Option A: Conda (Recommended)**
 ```bash
-# Install conda if not available
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh
-source ~/.bashrc
-
-# Create environment
+# Conda 환경 생성 (qVina2.1 포함)
 conda env create -f environment.yml
 conda activate active-learning-docking
+
+# qVina2.1 수동 설치 (더 빠른 성능)
+wget https://github.com/QVina/qvina/raw/refs/heads/master/bin/qvina2.1
+chmod +x qvina2.1
+mkdir -p bin && mv qvina2.1 bin/
+
+# 또는 conda 패키지: conda install -c conda-forge qvina
 ```
 
-**Option B: Virtual Environment + pip**
-```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
+### 🚀 qVina2.1 vs AutoDock Vina
 
-# Install dependencies
-pip install -r requirements.txt
+**qVina2.1 장점:**
+- **속도**: AutoDock Vina보다 최대 20배 빠름
+- **정확도**: 동일한 수준의 결합 포즈 예측 유지
+- **호환성**: AutoDock Vina와 동일한 입력/출력 형식
+- **Active Learning**: 대량 화합물 처리에 최적화
+
+## 🚨 문제 해결
+
+### 자주 발생하는 문제
+
+**설치 오류 시:**
+```bash
+# 권한 문제
+chmod +x setup_server.sh
+
+# Conda 문제
+conda clean --all
+conda update conda
+
+# 의존성 충돌
+conda env remove -n active-learning-docking
+./setup_server.sh  # 재설치
 ```
 
-**Option C: System-wide Installation**
+**실행 오류 시:**
 ```bash
-# For Ubuntu/Debian
-sudo apt-get update
-sudo apt-get install python3-pip python3-dev
-
-# Install dependencies
-pip3 install -r requirements.txt
-```
-
-#### 3. GPU Configuration (Optional but Recommended)
-
-**Check GPU availability:**
-```bash
-nvidia-smi
-python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
-```
-
-**For CUDA support:**
-```bash
-# Install CUDA-enabled PyTorch
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
-
-#### 4. Binary Dependencies
-
-**qvina2.1 Installation:**
-```bash
-# Download and setup qvina2.1
-wget https://github.com/QVina/qvina/releases/download/v2.1/qvina2.1-linux
-chmod +x qvina2.1-linux
-mkdir -p bin && mv qvina2.1-linux bin/qvina2.1
-
-# Verify installation
-./bin/qvina2.1 --help
-```
-
-#### 5. Permissions and Security
-
-```bash
-# Set proper file permissions
-chmod +x *.sh
-chmod +x bin/qvina2.1
-chmod -R 755 inputs/
-
-# For production environments, consider:
-# - Running as non-root user
-# - Setting up proper firewall rules
-# - Configuring secure file permissions
-```
-
-### 🔧 Configuration for Different Environments
-
-#### High-Performance Computing (HPC) Clusters
-
-```bash
-# Load required modules (example for SLURM)
-module load python/3.9
-module load cuda/11.8
-module load gcc/9.3.0
-
-# Set environment variables
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-export OMP_NUM_THREADS=8
-
-# Run with resource limits
-srun --nodes=1 --ntasks=1 --cpus-per-task=8 --mem=32G --gres=gpu:4 \
-     python main.py -o results -l inputs/reference.pdb -p inputs/protein.pdb -d inputs/candidates.csv
-```
-
-#### Cloud Platforms (AWS/GCP/Azure)
-
-```bash
-# Install cloud-specific tools
-pip install boto3  # for AWS
-pip install google-cloud-storage  # for GCP
-
-# Configure storage (example for AWS S3)
-export AWS_ACCESS_KEY_ID=your_key
-export AWS_SECRET_ACCESS_KEY=your_secret
-export S3_BUCKET=your_bucket_name
-```
-
-#### Docker Deployment (Advanced)
-
-```bash
-# Build Docker image
-docker build -t active-learning-docking .
-
-# Run container
-docker run -it --gpus all \
-    -v $(pwd)/inputs:/app/inputs \
-    -v $(pwd)/results:/app/results \
-    active-learning-docking
-```
-
-### 🚨 Troubleshooting Server Deployment
-
-#### Common Issues and Solutions
-
-**1. Permission Denied Errors**
-```bash
-chmod +x bin/qvina2.1
-chmod +x *.sh
-```
-
-**2. Missing System Dependencies**
-```bash
-# Ubuntu/Debian
-sudo apt-get install build-essential python3-dev libssl-dev libffi-dev
-
-# CentOS/RHEL
-sudo yum groupinstall "Development Tools"
-sudo yum install python3-devel openssl-devel libffi-devel
-```
-
-**3. CUDA/GPU Issues**
-```bash
-# Check CUDA installation
-nvcc --version
-python -c "import torch; print(torch.cuda.device_count())"
-
-# Force CPU-only mode if needed
-python main.py --device cpu [other arguments]
-```
-
-**4. Memory Issues**
-```bash
-# Reduce batch sizes for limited memory
-python main.py --batch_size 5 --batch_size_nn 128 [other arguments]
-
-# Monitor memory usage
-htop
-nvidia-smi
-```
-
-**5. Network/Download Issues**
-```bash
-# Use alternative download methods
-curl -L https://github.com/QVina/qvina/releases/download/v2.1/qvina2.1-linux -o bin/qvina2.1
-
-# For conda behind firewall
-conda config --set ssl_verify false  # Use with caution
-```
-
-### 📊 Verification and Testing
-
-**Test the installation:**
-```bash
-# Quick functionality test
-python test_installation.py
-
-# Run with small dataset
-python main.py -o test_results \
-    -l inputs/reference.pdb \
-    -p inputs/protein.pdb \
-    -d inputs/candidates.csv \
-    --batch_size 2 --n_cycles 2
-```
-
-**Monitor performance:**
-```bash
-# Check system resources
-htop
-nvidia-smi -l 1
-
-# Monitor logs in real-time
+# 로그 확인
 tail -f results/active_learning.log
+
+# 메모리 부족 시 작은 배치 사이즈 사용
+python main_refactored.py --config config.yml --batch_size 5
+
+# GPU 문제 시 CPU 모드
+python main_refactored.py --config config.yml --device cpu
 ```
-
-### 🔐 Production Deployment Notes
-
-- **Security**: Use environment variables for sensitive configuration
-- **Monitoring**: Set up log monitoring and alerts
-- **Backup**: Regular backup of model checkpoints and results
-- **Scaling**: Consider distributed computing for large datasets
-- **Updates**: Version control for model and code updates
 
 ## Quick Start
 
