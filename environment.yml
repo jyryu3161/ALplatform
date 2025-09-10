@@ -43,7 +43,7 @@ dependencies:
   
   # pip packages (for packages not available in conda)
   - pip:
-    - oddt==0.8.0
+    - oddt==0.7
     - biopython==1.81
     - autodock-vina==1.2.3
   
