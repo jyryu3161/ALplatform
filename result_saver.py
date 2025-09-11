@@ -22,16 +22,16 @@ class ResultSaverMixin:
             ])
             
             for cid in cycle_compounds:
-                if cid in self.docking_scores and cid in self.interaction_data:
-                    rmsd = self.interaction_data[cid]['rmsd']
-                    hbond_sim = self.interaction_data[cid]['hbond_similarity']
+                if cid in self.docking_engine.docking_scores and cid in self.docking_engine.interaction_data:
+                    rmsd = self.docking_engine.interaction_data[cid]['rmsd']
+                    hbond_sim = self.docking_engine.interaction_data[cid]['hbond_similarity']
                     
                     writer.writerow([
                         cid,
                         self.structure_info[cid],
-                        f"{self.docking_scores[cid]:.3f}",
-                        self.interaction_data[cid]['mcs_size'],
-                        f"{self.interaction_data[cid]['mcs_similarity']:.3f}",
+                        f"{self.docking_engine.docking_scores[cid]:.3f}",
+                        self.docking_engine.interaction_data[cid]['mcs_size'],
+                        f"{self.docking_engine.interaction_data[cid]['mcs_similarity']:.3f}",
                         f"{rmsd:.3f}",
                         f"{hbond_sim:.3f}"
                     ])
@@ -66,12 +66,12 @@ class ResultSaverMixin:
                 exploration_score = cycle_pred_data.get('exploration_score', 'N/A')
                 
                 # 실제 도킹 결과
-                if cid in self.docking_scores and cid in self.interaction_data:
-                    actual_score = self.docking_scores[cid]
-                    rmsd = self.interaction_data[cid]['rmsd']
-                    hbond_sim = self.interaction_data[cid]['hbond_similarity']
-                    mcs_size = self.interaction_data[cid]['mcs_size']
-                    mcs_sim = self.interaction_data[cid]['mcs_similarity']
+                if cid in self.docking_engine.docking_scores and cid in self.docking_engine.interaction_data:
+                    actual_score = self.docking_engine.docking_scores[cid]
+                    rmsd = self.docking_engine.interaction_data[cid]['rmsd']
+                    hbond_sim = self.docking_engine.interaction_data[cid]['hbond_similarity']
+                    mcs_size = self.docking_engine.interaction_data[cid]['mcs_size']
+                    mcs_sim = self.docking_engine.interaction_data[cid]['mcs_similarity']
                     docking_status = 'Success'
                     
                     # 예측 오차 계산
@@ -118,10 +118,10 @@ class ResultSaverMixin:
             ])
             
             # 실제 도킹된 분자들에 대한 예측 성능 분석
-            for cid in self.docking_scores:
-                if cid in self.predicted_scores:  # 예측이 있는 경우만
-                    predicted = self.predicted_scores[cid]
-                    actual = self.docking_scores[cid]
+            for cid in self.docking_engine.docking_scores:
+                if cid in self.sample_acquisition.predicted_scores:  # 예측이 있는 경우만
+                    predicted = self.sample_acquisition.predicted_scores[cid]
+                    actual = self.docking_engine.docking_scores[cid]
                     error = abs(predicted - actual)
                     uncertainty = self.prediction_uncertainty.get(cid, 'N/A')
                     acq_score = self.acquisition_scores.get(cid, 'N/A')
@@ -144,16 +144,16 @@ class ResultSaverMixin:
 
     def log_prediction_statistics(self):
         """예측 성능 통계 출력"""
-        if not self.predicted_scores:
+        if not self.sample_acquisition.predicted_scores:
             logging.info("No prediction data available for analysis")
             return
         
         # 실제 도킹된 분자 중 예측이 있는 것들만 분석
         valid_predictions = []
-        for cid in self.docking_scores:
-            if cid in self.predicted_scores:
-                predicted = self.predicted_scores[cid]
-                actual = self.docking_scores[cid]
+        for cid in self.docking_engine.docking_scores:
+            if cid in self.sample_acquisition.predicted_scores:
+                predicted = self.sample_acquisition.predicted_scores[cid]
+                actual = self.docking_engine.docking_scores[cid]
                 valid_predictions.append((predicted, actual))
         
         if len(valid_predictions) < 2:
@@ -171,7 +171,7 @@ class ResultSaverMixin:
         correlation = np.corrcoef(predicted_values, actual_values)[0, 1]
         
         logging.info("\n=== Prediction Performance Analysis ===")
-        logging.info(f"Total predictions made: {len(self.predicted_scores):,}")
+        logging.info(f"Total predictions made: {len(self.sample_acquisition.predicted_scores):,}")
         logging.info(f"Predictions with actual docking: {len(valid_predictions)}")
         logging.info(f"Prediction MAE: {mae:.3f}")
         logging.info(f"Prediction RMSE: {rmse:.3f}")
@@ -194,19 +194,19 @@ class ResultSaverMixin:
             
             for idx in self.training_indices:
                 cid = self.cids[idx]
-                if (cid in self.docking_scores and 
-                    cid in self.interaction_data and 
-                    self.interaction_data[cid]['rmsd'] <= 2.0 and
-                    self.interaction_data[cid]['hbond_similarity'] >= self.hbond_similarity_threshold):
+                if (cid in self.docking_engine.docking_scores and 
+                    cid in self.docking_engine.interaction_data and 
+                    self.docking_engine.interaction_data[cid]['rmsd'] <= 2.0 and
+                    self.docking_engine.interaction_data[cid]['hbond_similarity'] >= self.hbond_similarity_threshold):
                     
                     writer.writerow([
                         cid,
                         self.structure_info[cid],
-                        f"{self.docking_scores[cid]:.3f}",
-                        self.interaction_data[cid]['mcs_size'],
-                        f"{self.interaction_data[cid]['mcs_similarity']:.3f}",
-                        f"{self.interaction_data[cid]['rmsd']:.3f}",
-                        f"{self.interaction_data[cid]['hbond_similarity']:.3f}"
+                        f"{self.docking_engine.docking_scores[cid]:.3f}",
+                        self.docking_engine.interaction_data[cid]['mcs_size'],
+                        f"{self.docking_engine.interaction_data[cid]['mcs_similarity']:.3f}",
+                        f"{self.docking_engine.interaction_data[cid]['rmsd']:.3f}",
+                        f"{self.docking_engine.interaction_data[cid]['hbond_similarity']:.3f}"
                     ])
 
         logging.info(f"Saved cycle {cycle_number} results to {results_file}")
@@ -221,23 +221,23 @@ class ResultSaverMixin:
                 'MCS_size', 'MCS_similarity', 'RMSD', 'HBond_similarity'
             ])
             
-            for cid, score in sorted(self.docking_scores.items(), key=lambda x: x[1]):
+            for cid, score in sorted(self.docking_engine.docking_scores.items(), key=lambda x: x[1]):
                 if cid not in self.structure_info:
                     logging.debug(f"Skipping removed CID: {cid}")
                     continue
 
-                if (cid in self.interaction_data and 
-                    self.interaction_data[cid]['rmsd'] <= 2.0 and
-                    self.interaction_data[cid]['hbond_similarity'] >= self.hbond_similarity_threshold):
+                if (cid in self.docking_engine.interaction_data and 
+                    self.docking_engine.interaction_data[cid]['rmsd'] <= 2.0 and
+                    self.docking_engine.interaction_data[cid]['hbond_similarity'] >= self.hbond_similarity_threshold):
                     
                     writer.writerow([
                         cid,
                         self.structure_info[cid],
                         f"{score:.3f}",
-                        self.interaction_data[cid]['mcs_size'],
-                        f"{self.interaction_data[cid]['mcs_similarity']:.3f}",
-                        f"{self.interaction_data[cid]['rmsd']:.3f}",
-                        f"{self.interaction_data[cid]['hbond_similarity']:.3f}"
+                        self.docking_engine.interaction_data[cid]['mcs_size'],
+                        f"{self.docking_engine.interaction_data[cid]['mcs_similarity']:.3f}",
+                        f"{self.docking_engine.interaction_data[cid]['rmsd']:.3f}",
+                        f"{self.docking_engine.interaction_data[cid]['hbond_similarity']:.3f}"
                     ])
 
         logging.info(f"Final results saved to {results_file}")

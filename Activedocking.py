@@ -239,6 +239,7 @@ class ActiveLearningWithConformers(ResultSaverMixin):
             
         except Exception as e:
             logging.error(f"Data loading failed: {str(e)}")
+            logging.debug(f"Detailed traceback for data loading failure:", exc_info=True)
             return False
     
     def initialize_training_set(self, n_initial: Optional[int] = None) -> bool:

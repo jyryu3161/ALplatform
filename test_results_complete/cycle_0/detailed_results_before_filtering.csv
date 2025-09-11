@@ -1,0 +1,4 @@
+CID,SMILES,qVina_affinity,MCS_size,MCS_similarity,RMSD,HBond_similarity
+Z4631846184,CC1(c2cccc(C(=O)N3CCC(c4ccccc4)C3)c2)CC1,-8.400,13,0.394,2.419,1.000
+Z8174588583,CC(C)CS(=O)(=O)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1,-8.500,9,0.265,1.343,1.000
+Z8174637452,C[C@@H](O)C(=O)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1,-8.700,9,0.273,1.248,1.000

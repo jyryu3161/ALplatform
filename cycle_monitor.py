@@ -84,8 +84,10 @@ class CyclePerformanceMonitor:
         with open(self.summary_file, 'a', newline='') as f:
             writer = csv.writer(f)
             
-            # metrics에서 성능 지표 추출
+            # metrics에서 성능 지표 추출 (None 안전 처리)
             metrics = cycle_data.get('metrics', {})
+            if metrics is None:
+                metrics = {}
             training_r2 = metrics.get('r2', '')
             training_mae = metrics.get('mae', '')
             training_rmse = metrics.get('rmse', '')

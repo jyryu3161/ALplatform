@@ -218,9 +218,12 @@ class CSVDataLoader:
         original_count = len(molecule_dict)
         logging.info(f"Applying element filtering to {library_name} ({original_count:,} compounds)...")
         
-        filtered_dict, filtered_count = self.molecule_filter.filter_molecule_dict(molecule_dict)
+        filtered_dict, filter_stats = self.molecule_filter.filter_molecule_dict(molecule_dict)
         
-        filter_rate = (filtered_count / original_count * 100) if original_count > 0 else 0
+        # filter_stats는 딕셔너리이므로 필요한 값을 추출
+        filtered_count = filter_stats.get('total_filtered', 0) if isinstance(filter_stats, dict) else 0
+        filter_rate = filter_stats.get('filter_rate', 0) if isinstance(filter_stats, dict) else 0
+        
         logging.info(f"{library_name} element filtering: {original_count:,} → {len(filtered_dict):,} "
                     f"({filter_rate:.1f}% filtered out)")
         
@@ -228,12 +231,39 @@ class CSVDataLoader:
         if library_name in self.loading_stats:
             self.loading_stats[library_name]['after_element_filter'] = len(filtered_dict)
             self.loading_stats[library_name]['element_filtered'] = filtered_count
+            # 상세한 필터링 통계도 저장
+            if isinstance(filter_stats, dict):
+                self.loading_stats[library_name]['filter_stats'] = filter_stats
         
         return filtered_dict
     
     def get_loading_statistics(self) -> Dict[str, Dict]:
         """로딩 통계를 반환합니다."""
-        return self.loading_stats.copy()
+        # 데이터 검증 및 정리
+        validated_stats = {}
+        for lib_name, stat in self.loading_stats.items():
+            if isinstance(stat, dict):
+                # 필수 키들의 타입 검증
+                validated_stat = {}
+                for key in ['original_count', 'loaded_count']:
+                    value = stat.get(key, 0)
+                    if isinstance(value, (int, float)):
+                        validated_stat[key] = int(value)
+                    else:
+                        logging.warning(f"Invalid {key} type in {lib_name}: {type(value)}, setting to 0")
+                        validated_stat[key] = 0
+                
+                # 추가 통계 정보 복사
+                for key, value in stat.items():
+                    if key not in validated_stat:
+                        validated_stat[key] = value
+                        
+                validated_stats[lib_name] = validated_stat
+            else:
+                logging.warning(f"Invalid statistics format for {lib_name}: {type(stat)}")
+                validated_stats[lib_name] = {'original_count': 0, 'loaded_count': 0}
+        
+        return validated_stats
     
     def save_deduplication_report(self, output_dir: str):
         """중복제거 리포트를 저장합니다."""
@@ -314,7 +344,13 @@ class MolecularDataLoader:
         all_invalid_smiles = self.similarity_filter.invalid_smiles.copy()
         
         # 최종 통계 로깅
-        self._log_final_statistics(main_library, initial_library, combined_library)
+        try:
+            logging.debug(f"Before _log_final_statistics, loading_stats: {self.csv_loader.loading_stats}")
+            self._log_final_statistics(main_library, initial_library, combined_library)
+        except Exception as e:
+            logging.error(f"Critical error in _log_final_statistics: {str(e)}")
+            logging.debug(f"Stats content: {self.csv_loader.loading_stats}")
+            raise
         
         self.combined_data = combined_library
         self.invalid_smiles = all_invalid_smiles
@@ -364,24 +400,47 @@ class MolecularDataLoader:
                             initial_library: Dict[str, str], 
                             combined_library: Dict[str, str]):
         """최종 처리 통계를 로깅합니다."""
-        stats = self.csv_loader.get_loading_statistics()
-        
-        total_original = sum(stat.get('original_count', 0) for stat in stats.values())
-        final_total = len(combined_library)
-        
-        logging.info("=" * 60)
-        logging.info("OPTIMIZED FILTERING PIPELINE COMPLETED")
-        logging.info("=" * 60)
-        logging.info(f"Combined Library Final Statistics:")
-        logging.info(f"  Total Original: {total_original:,} compounds")
-        logging.info(f"  Final Combined: {final_total:,} compounds")
-        
-        if total_original > 0:
-            efficiency = (final_total / total_original * 100)
-            logging.info(f"  Overall Efficiency: {efficiency:.1f}% retained")
-        
-        logging.info(f"  Processing Order: Deduplication → Similarity → Element Filtering")
-        logging.info("=" * 60)
+        try:
+            stats = self.csv_loader.get_loading_statistics()
+            
+            # 타입 안전성을 보장하는 통계 계산
+            total_original = 0
+            for lib_name, stat in stats.items():
+                if isinstance(stat, dict):
+                    original_count = stat.get('original_count', 0)
+                    if isinstance(original_count, (int, float)):
+                        total_original += int(original_count)
+                    else:
+                        logging.warning(f"Invalid original_count type in {lib_name}: {type(original_count)}")
+                else:
+                    logging.warning(f"Invalid stat type for {lib_name}: {type(stat)}")
+            
+            final_total = len(combined_library)
+            
+            logging.info("=" * 60)
+            logging.info("OPTIMIZED FILTERING PIPELINE COMPLETED")
+            logging.info("=" * 60)
+            logging.info(f"Combined Library Final Statistics:")
+            logging.info(f"  Total Original: {total_original:,} compounds")
+            logging.info(f"  Final Combined: {final_total:,} compounds")
+            
+            if total_original > 0:
+                efficiency = (final_total / total_original * 100)
+                logging.info(f"  Overall Efficiency: {efficiency:.1f}% retained")
+            else:
+                logging.warning("  Cannot calculate efficiency: total_original is 0")
+            
+            logging.info(f"  Processing Order: Deduplication → Similarity → Element Filtering")
+            logging.info("=" * 60)
+            
+        except Exception as e:
+            logging.error(f"Error logging final statistics: {str(e)}")
+            logging.info("=" * 60)
+            logging.info("OPTIMIZED FILTERING PIPELINE COMPLETED")
+            logging.info("=" * 60)
+            logging.info(f"Final Combined Library: {len(combined_library):,} compounds")
+            logging.info("(Detailed statistics unavailable due to error)")
+            logging.info("=" * 60)
     
     def save_deduplication_report(self, output_dir: str):
         """중복제거 리포트를 저장합니다."""
