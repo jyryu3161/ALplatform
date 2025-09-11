@@ -124,18 +124,18 @@ python test_installation.py
 
 ```bash
 python main.py -o results \
-    -l inputs/reference_ligand.pdb \
-    -p inputs/target_protein.pdb \
-    -d inputs/compound_database.csv
+    -l inputs/reference.pdb \
+    -p inputs/protein.pdb \
+    -d inputs/candidates.csv
 ```
 
 ### With Hyperparameter Auto-Tuning (Recommended)
 
 ```bash
 python main.py -o results \
-    -l inputs/reference_ligand.pdb \
-    -p inputs/target_protein.pdb \
-    -d inputs/compound_database.csv \
+    -l inputs/reference.pdb \
+    -p inputs/protein.pdb \
+    -d inputs/candidates.csv \
     --auto_tune --epochs 150
 ```
 
@@ -150,9 +150,9 @@ python main.py --config config.yml
 
 ```bash
 python main.py -o results \
-    -l inputs/reference_ligand.pdb \
-    -p inputs/target_protein.pdb \
-    -d inputs/compound_database.csv \
+    -l inputs/reference.pdb \
+    -p inputs/protein.pdb \
+    -d inputs/candidates.csv \
     --batch_size 20 \
     --n_cycles 15 \
     --similarity 0.3 \
@@ -168,7 +168,7 @@ python main.py -o results \
 1. **Reference Ligand** (`-l/--ligand`): PDB file of known active ligand for RMSD similarity calculations
 2. **Target Protein** (`-p/--protein`): PDB file of target protein for molecular docking
 3. **Compound Database** (`-d/--database`): CSV file with required columns:
-   - `Catalog ID`: Unique compound identifier
+   - `Catalog ID`: Unique compound identifier  
    - `smiles`: SMILES string representation of molecular structure
 
 ### Optional Files
@@ -278,7 +278,7 @@ results/
 ├── final_results.csv                    # Top-ranked compounds with scores
 ├── active_learning.log                  # Detailed execution log with timestamps
 ├── cycle_performance_summary.csv        # Performance metrics per cycle
-├── deduplication_report.csv            # Molecular deduplication statistics
+├── deduplication_report.csv            # Molecular deduplication statistics (if enabled)
 ├── prediction_analysis.csv             # Model prediction analysis and uncertainty
 ├── cycle_*/                            # Individual cycle results
 │   ├── cycle_results.csv               # Selected compounds and docking scores
@@ -412,13 +412,13 @@ df -h
 python main.py --disable_element_filter
 
 # Check database format
-head -5 inputs/compound_database.csv
+head -5 inputs/candidates.csv
 
 # Validate SMILES strings
 python -c "
 import pandas as pd
 from rdkit import Chem
-df = pd.read_csv('inputs/compound_database.csv')
+df = pd.read_csv('inputs/candidates.csv')
 invalid = [i for i, smi in enumerate(df['smiles']) if Chem.MolFromSmiles(smi) is None]
 print(f'Invalid SMILES at rows: {invalid[:10]}')
 "
