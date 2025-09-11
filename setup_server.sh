@@ -273,7 +273,7 @@ echo "7. 설치 테스트 중..."
 # 간단한 import 테스트
 python -c "
 try:
-    from main_refactored import main
+    from main import main
     from config_manager import ConfigManager
     print('✓ 프로젝트 모듈 로드 성공')
 except ImportError as e:
@@ -301,12 +301,12 @@ echo "다음 단계:"
 echo "1. 환경 활성화: conda activate active-learning-docking"
 echo "2. 예제 실행: ./run_example.sh"
 echo "3. 또는 직접 실행:"
-echo "   python main_refactored.py --config config.yml"
+echo "   python main.py --config config.yml"
 echo ""
 
 if [[ -f "inputs/protein.pdb" ]] && [[ -f "inputs/reference.pdb" ]] && [[ -f "inputs/candidates.csv" ]]; then
     echo "바로 실행할 수 있습니다:"
-    echo "conda activate active-learning-docking && python main_refactored.py --config config.yml"
+    echo "conda activate active-learning-docking && python main.py --config config.yml"
 else
     echo "실행하기 전에 다음 파일들을 inputs/ 폴더에 준비하세요:"
     echo "- protein.pdb (타겟 단백질)"

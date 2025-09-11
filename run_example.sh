@@ -170,10 +170,10 @@ case $choice in
     a)
         echo ""
         echo "Running with command line arguments..."
-        echo "Command: python main_refactored.py --protein inputs/protein.pdb --ligand inputs/reference.pdb --database inputs/candidates.csv --output example_results"
+        echo "Command: python main.py --protein inputs/protein.pdb --ligand inputs/reference.pdb --database inputs/candidates.csv --output example_results"
         
         if [ -f "inputs/protein.pdb" ] && [ -f "inputs/reference.pdb" ] && [ -f "inputs/candidates.csv" ]; then
-            python main_refactored.py \
+            python main.py \
                 --protein inputs/protein.pdb \
                 --ligand inputs/reference.pdb \
                 --database inputs/candidates.csv \
@@ -200,9 +200,9 @@ case $choice in
         fi
         
         echo "Using configuration file: $config_file"
-        echo "Command: python main_refactored.py --config $config_file"
+        echo "Command: python main.py --config $config_file"
         
-        python main_refactored.py --config "$config_file"
+        python main.py --config "$config_file"
         ;;
     c)
         echo ""
@@ -245,6 +245,6 @@ echo "2. Review the log file for detailed information"
 echo "3. Customize the configuration for your specific needs"
 echo "4. Scale up the budget and cycles for production runs"
 echo ""
-echo "For help: python main_refactored.py --help"
+echo "For help: python main.py --help"
 echo "Documentation: See README.md for detailed usage"
 echo "=========================================="
