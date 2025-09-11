@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import logging
 import yaml
@@ -119,6 +120,13 @@ Examples:
     exploration_group.add_argument('--final_exploration_ratio', type=float, default=0.2,
                                   help="Final exploration ratio (default: 0.2)")
     
+    # 명령행에서 실제로 제공된 인수들 기록
+    provided_args = set()
+    for action in parser._actions:
+        for option_string in action.option_strings:
+            if option_string in sys.argv:
+                provided_args.add(action.dest)
+    
     args = parser.parse_args()
     
     # ===== YAML 설정 파일 처리 =====
@@ -129,8 +137,8 @@ Examples:
             # 명령행에서 제공되지 않은 값들을 YAML에서 가져오기
             for key, value in config.items():
                 if hasattr(args, key):
-                    current_value = getattr(args, key)
-                    if current_value is None:
+                    was_provided = key in provided_args
+                    if not was_provided:
                         setattr(args, key, value)
                     
         except Exception as e:

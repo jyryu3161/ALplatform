@@ -260,10 +260,11 @@ fi
 echo ""
 echo "6. 예제 데이터 확인 중..."
 
-# 기본 config.yml 생성 (항상 생성)
-echo "   기본 설정 파일을 생성합니다."
-
-cat > config.yml << 'EOF'
+# 기본 config.yml 생성 (기존 파일이 없을 때만)
+if [ ! -f "config.yml" ]; then
+    echo "   기본 설정 파일을 생성합니다."
+    
+    cat > config.yml << 'EOF'
 # 빠른 테스트용 기본 설정
 input:
   protein_file: "inputs/protein.pdb"
@@ -294,7 +295,13 @@ system:
     console_output: true
 EOF
 
-progress "기본 설정 파일 생성 완료"
+    progress "기본 설정 파일 생성 완료"
+else
+    echo "   기존 config.yml 파일을 유지합니다."
+    # 기존 파일 백업 생성
+    cp config.yml config.yml.backup.$(date +%Y%m%d_%H%M%S)
+    echo "   백업 파일도 생성했습니다: config.yml.backup.$(date +%Y%m%d_%H%M%S)"
+fi
 
 # 예제 데이터 확인
 if [[ -f "inputs/protein.pdb" ]] && [[ -f "inputs/reference.pdb" ]] && [[ -f "inputs/candidates.csv" ]]; then
