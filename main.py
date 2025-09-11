@@ -56,13 +56,13 @@ Examples:
     
     # ===== 필수 파라미터 =====
     required = parser.add_argument_group('Required Arguments')
-    required.add_argument('-o', '--output_dir', 
+    required.add_argument('-o', '--output_dir', default=None,
                          help="Output directory for results")
-    required.add_argument('-l', '--ligand', 
+    required.add_argument('-l', '--ligand', default=None,
                          help="Reference ligand PDB file") 
-    required.add_argument('-p', '--protein', 
+    required.add_argument('-p', '--protein', default=None,
                          help="Target protein PDB file") 
-    required.add_argument('-d', '--database', 
+    required.add_argument('-d', '--database', default=None,
                          help="Chemical database CSV file")
     
     # ===== 튜닝 옵션 =====
@@ -128,8 +128,10 @@ Examples:
             
             # 명령행에서 제공되지 않은 값들을 YAML에서 가져오기
             for key, value in config.items():
-                if hasattr(args, key) and getattr(args, key) is None:
-                    setattr(args, key, value)
+                if hasattr(args, key):
+                    current_value = getattr(args, key)
+                    if current_value is None:
+                        setattr(args, key, value)
                     
         except Exception as e:
             print(f"오류: {e}")
