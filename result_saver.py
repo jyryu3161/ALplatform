@@ -58,7 +58,7 @@ class ResultSaverMixin:
                 smiles = self.structure_info.get(cid, 'N/A')
                 
                 # 예측 정보 가져오기
-                cycle_pred_data = self.cycle_predictions.get(cycle_number, {}).get(cid, {})
+                cycle_pred_data = self.sample_acquisition.cycle_predictions.get(cycle_number, {}).get(cid, {})
                 predicted_score = cycle_pred_data.get('predicted_score', 'N/A')
                 uncertainty = cycle_pred_data.get('uncertainty', 'N/A')
                 acquisition_score = cycle_pred_data.get('acquisition_score', 'N/A')
@@ -123,8 +123,8 @@ class ResultSaverMixin:
                     predicted = self.sample_acquisition.predicted_scores[cid]
                     actual = self.docking_engine.docking_scores[cid]
                     error = abs(predicted - actual)
-                    uncertainty = self.prediction_uncertainty.get(cid, 'N/A')
-                    acq_score = self.acquisition_scores.get(cid, 'N/A')
+                    uncertainty = self.sample_acquisition.prediction_uncertainty.get(cid, 'N/A')
+                    acq_score = self.sample_acquisition.acquisition_scores.get(cid, 'N/A')
                     
                     writer.writerow([
                         cid,
