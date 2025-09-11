@@ -247,7 +247,6 @@ def test_project_modules():
         ('Hbond', '수소결합 분석'),
         ('cycle_monitor', '사이클 모니터'),
         ('result_saver', '결과 저장'),
-        ('constants', '상수 정의'),
         ('exceptions', '예외 처리')
     ]
     

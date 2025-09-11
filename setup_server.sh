@@ -226,11 +226,10 @@ fi
 echo ""
 echo "6. 예제 데이터 확인 중..."
 
-if [[ ! -f "inputs/protein.pdb" ]] || [[ ! -f "inputs/reference.pdb" ]] || [[ ! -f "inputs/candidates.csv" ]]; then
-    echo "   예제 데이터가 없습니다. 기본 설정 파일을 생성합니다."
-    
-    # 기본 config.yml 생성 (작은 예제용)
-    cat > config.yml << 'EOF'
+# 기본 config.yml 생성 (항상 생성)
+echo "   기본 설정 파일을 생성합니다."
+
+cat > config.yml << 'EOF'
 # 빠른 테스트용 기본 설정
 input:
   protein_file: "inputs/protein.pdb"
@@ -261,9 +260,13 @@ system:
     console_output: true
 EOF
 
-    progress "기본 설정 파일 생성 완료"
-else
+progress "기본 설정 파일 생성 완료"
+
+# 예제 데이터 확인
+if [[ -f "inputs/protein.pdb" ]] && [[ -f "inputs/reference.pdb" ]] && [[ -f "inputs/candidates.csv" ]]; then
     progress "예제 데이터 확인됨"
+else
+    echo "   예제 데이터가 없습니다. 사용자가 직접 제공해야 합니다."
 fi
 
 # 7. 설치 테스트
