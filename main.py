@@ -1,8 +1,22 @@
 import os
 import argparse
 import logging
+import yaml
 from datetime import datetime
 from Activedocking import ActiveLearningWithConformers
+
+def load_yaml_config(config_file):
+    """YAML 설정 파일을 로드합니다."""
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+        return config
+    except FileNotFoundError:
+        raise FileNotFoundError(f"설정 파일을 찾을 수 없습니다: {config_file}")
+    except yaml.YAMLError as e:
+        raise ValueError(f"YAML 파일 파싱 오류: {e}")
+    except Exception as e:
+        raise Exception(f"설정 파일 로드 오류: {e}")
 
 def setup_logging(output_dir):
     log_file = os.path.join(output_dir, 'active_learning.log')
@@ -36,15 +50,19 @@ Examples:
         """
     )
     
+    # ===== 설정 파일 옵션 =====
+    parser.add_argument('--config', type=str, 
+                       help="YAML 설정 파일 경로")
+    
     # ===== 필수 파라미터 =====
     required = parser.add_argument_group('Required Arguments')
-    required.add_argument('-o', '--output_dir', required=True, 
+    required.add_argument('-o', '--output_dir', 
                          help="Output directory for results")
-    required.add_argument('-l', '--ligand', required=True, 
+    required.add_argument('-l', '--ligand', 
                          help="Reference ligand PDB file") 
-    required.add_argument('-p', '--protein', required=True, 
+    required.add_argument('-p', '--protein', 
                          help="Target protein PDB file") 
-    required.add_argument('-d', '--database', required=True, 
+    required.add_argument('-d', '--database', 
                          help="Chemical database CSV file")
     
     # ===== 튜닝 옵션 =====
@@ -102,6 +120,41 @@ Examples:
                                   help="Final exploration ratio (default: 0.2)")
     
     args = parser.parse_args()
+    
+    # ===== YAML 설정 파일 처리 =====
+    if args.config:
+        try:
+            config = load_yaml_config(args.config)
+            
+            # 명령행에서 제공되지 않은 값들을 YAML에서 가져오기
+            for key, value in config.items():
+                if hasattr(args, key) and getattr(args, key) is None:
+                    setattr(args, key, value)
+                    
+        except Exception as e:
+            print(f"오류: {e}")
+            return 1
+    
+    # ===== 필수 매개변수 검증 =====
+    required_params = {
+        'output_dir': '-o/--output_dir',
+        'ligand': '-l/--ligand',
+        'protein': '-p/--protein', 
+        'database': '-d/--database'
+    }
+    
+    missing_params = []
+    for param, flag in required_params.items():
+        if not getattr(args, param):
+            missing_params.append(flag)
+    
+    if missing_params:
+        print("오류: 다음 필수 매개변수들이 누락되었습니다:")
+        for param in missing_params:
+            print(f"  {param}")
+        if args.config:
+            print(f"설정 파일 '{args.config}'에서 이 값들을 제공해주세요.")
+        return 1
     
     setup_logging(args.output_dir)
     
