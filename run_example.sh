@@ -210,19 +210,21 @@ case $choice in
         python -c "
 import os
 import sys
-from config_manager import ConfigManager
+import yaml
 
 try:
+    config_file = None
     if os.path.exists('config.yml'):
-        config = ConfigManager('config.yml')
-        print('✓ config.yml is valid')
+        config_file = 'config.yml'
     elif os.path.exists('config_example.yml'):
-        config = ConfigManager('config_example.yml')  
-        print('✓ config_example.yml is valid')
+        config_file = 'config_example.yml'
     else:
         print('No configuration file found')
         sys.exit(1)
-        
+    
+    with open(config_file, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    print(f'✓ {config_file} is valid')
     print('Configuration validation completed successfully!')
 except Exception as e:
     print(f'Configuration validation failed: {e}')

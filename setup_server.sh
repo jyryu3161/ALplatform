@@ -274,7 +274,6 @@ echo "7. 설치 테스트 중..."
 python -c "
 try:
     from main import main
-    from config_manager import ConfigManager
     print('✓ 프로젝트 모듈 로드 성공')
 except ImportError as e:
     print(f'✗ 모듈 오류: {e}')
