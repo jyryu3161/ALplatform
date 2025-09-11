@@ -56,15 +56,34 @@ echo "1. 시스템 요구사항 확인 중..."
 
 # Python 버전 확인
 if ! python3 --version &> /dev/null; then
-    error "Python 3가 설치되어 있지 않습니다. Python 3.8+ 필요"
+    warning "Python 3가 설치되어 있지 않습니다. Conda로 Python 환경을 구성합니다."
+    SYSTEM_PYTHON_OK=false
+else
+    # 정확한 숫자 비교로 Python 버전 확인
+    PYTHON_VERSION_CHECK=$(python3 -c "
+import sys
+major, minor = sys.version_info.major, sys.version_info.minor
+version_tuple = (major, minor)
+required_tuple = (3, 8)
+if version_tuple >= required_tuple:
+    print('OK')
+    print(f'{major}.{minor}')
+else:
+    print('OUTDATED')
+    print(f'{major}.{minor}')
+")
+    
+    PYTHON_STATUS=$(echo "$PYTHON_VERSION_CHECK" | head -n1)
+    PYTHON_VERSION=$(echo "$PYTHON_VERSION_CHECK" | tail -n1)
+    
+    if [[ "$PYTHON_STATUS" == "OK" ]]; then
+        progress "시스템 Python $PYTHON_VERSION 확인됨 (3.8+ 요구사항 충족)"
+        SYSTEM_PYTHON_OK=true
+    else
+        warning "시스템 Python $PYTHON_VERSION은 3.8 미만입니다. Conda 환경에서 적절한 버전을 설치합니다."
+        SYSTEM_PYTHON_OK=false
+    fi
 fi
-
-PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-if [[ "$PYTHON_VERSION" < "3.8" ]]; then
-    error "Python 3.8+ 필요 (현재: $PYTHON_VERSION)"
-fi
-
-progress "Python $PYTHON_VERSION 확인됨"
 
 # 2. Conda 설치 확인 및 설치
 echo ""
@@ -116,7 +135,12 @@ if conda env list | grep -q "active-learning-docking"; then
 fi
 
 # 새 환경 생성
-echo "   환경 생성 중 (몇 분 소요될 수 있습니다)..."
+if [[ "$SYSTEM_PYTHON_OK" == "false" ]]; then
+    echo "   환경 생성 중 (시스템 Python이 구버전이므로 conda에서 Python 3.8+ 설치, 몇 분 소요될 수 있습니다)..."
+else
+    echo "   환경 생성 중 (몇 분 소요될 수 있습니다)..."
+fi
+
 conda env create -f $ENV_FILE
 
 if [ $? -eq 0 ]; then
@@ -175,6 +199,16 @@ echo "5. 패키지 설치 확인 및 CUDA 호환성 테스트 중..."
 
 python -c "
 import sys
+
+# Conda 환경 내 Python 버전 확인
+major, minor = sys.version_info.major, sys.version_info.minor
+print(f'✓ Conda 환경 Python 버전: {major}.{minor}')
+
+if (major, minor) >= (3, 8):
+    print('✓ Python 3.8+ 요구사항 충족됨')
+else:
+    print(f'✗ Python 버전 문제: {major}.{minor} < 3.8')
+    sys.exit(1)
 
 # 필수 패키지 확인
 try:
