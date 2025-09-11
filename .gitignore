@@ -250,7 +250,7 @@ receptor_*
 ligand_*
 
 # Test results and coverage
-test_results/
+test_results*/
 test_outputs/
 .coverage*
 htmlcov/
@@ -283,3 +283,6 @@ fingerprint_cache/
 # System monitoring files
 *.prof
 *.profile
+
+# Development documentation
+REFACTORING_SUMMARY.md
