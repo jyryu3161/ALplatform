@@ -151,20 +151,34 @@ max_threads: 8
 
 ## Results
 
-The result file is saved as `OUTPUT_DIRECTORY/final_results.csv` in CSV format. The report includes:
-- `Catalog ID`: Unique compound identifier
-- `smiles`: SMILES string of the compound
-- `docking_score`: Predicted binding affinity
-- `uncertainty`: Model uncertainty estimate
-- `similarity`: Tanimoto similarity to reference ligand
-- `rmsd`: RMSD to reference ligand pose
+The results are organized in the output directory as follows:
 
-For sub-data:
-- Active learning logs are saved as `OUTPUT_DIRECTORY/active_learning.log`
-- Cycle-specific results are saved as `OUTPUT_DIRECTORY/cycle_*/`
-- Model performance metrics are saved as `OUTPUT_DIRECTORY/cycle_performance_summary.csv`
-- Molecular docking poses are saved as `OUTPUT_DIRECTORY/pose/pose_*.pdbqt`
+```
+results/
+├── final_results.csv                          # Top-ranked compounds with docking scores
+├── active_learning.log                        # Detailed execution log
+├── cycle_performance_summary.csv              # Performance metrics per cycle
+├── prediction_analysis.csv                    # Model prediction analysis
+├── cycle_1/                                   # First cycle results
+│   ├── cycle_results.csv                      # Selected compounds for this cycle
+│   ├── detailed_results_with_predictions.csv  # Predictions with uncertainty
+│   └── detailed_results_before_filtering.csv  # Pre-filter results
+├── cycle_2/                                   # Second cycle results
+│   ├── cycle_results.csv
+│   ├── detailed_results_with_predictions.csv
+│   └── detailed_results_before_filtering.csv
+├── ...
+├── cycle_N/                                   # Final cycle results
+└── pose/                                      # Molecular docking poses
+    ├── pose_ZINC000001.pdbqt                  # Individual compound poses
+    ├── pose_ZINC000002.pdbqt
+    └── ...
+```
 
+**Key output files:**
+- `final_results.csv`: Top-ranked compounds with columns: Catalog ID, smiles, docking_score, uncertainty, similarity, rmsd
+- `active_learning.log`: Complete execution log with timestamps and performance metrics
+- `cycle_performance_summary.csv`: R² scores, timing, and memory usage per cycle
 
 
 ## Contact
