@@ -2,16 +2,17 @@ name: active-learning-docking
 channels:
   - conda-forge
   - pytorch
+  - nvidia
   - defaults
 dependencies:
   # Python and core ML frameworks
   - python=3.9
   
-  # PyTorch CPU-only version
+  # PyTorch with CUDA support (automatically selects compatible version)
   - pytorch>=1.13.0
   - torchvision
   - torchaudio
-  - cpuonly  # Forces CPU-only installation
+  - pytorch-cuda=11.8  # Stable CUDA version for most systems
   
   # Scientific computing (stable versions)
   - numpy=1.24.3
@@ -49,10 +50,14 @@ dependencies:
     - oddt==0.7
     - biopython==1.81
     - vina==1.2.7
+  
+# Alternative CPU-only environment (create environment-cpu.yml for CPU-only systems)
+# For systems without CUDA, replace pytorch-cuda=11.8 with cpuonly channel:
+# - cpuonly
 
 # Post-installation notes:
-# 1. This environment is for CPU-only systems without CUDA
-# 2. Performance will be slower than GPU version for neural network training
-# 3. Run test_installation.py after setup to verify installation
+# 1. This environment includes CUDA 11.8 support for GPU acceleration
+# 2. For CPU-only systems, use: conda env create -f environment-cpu.yml  
+# 3. Run test_installation.py after setup to verify CUDA compatibility
 # 4. Configure qvina2.1 binary path in config.yml
 # 5. Ensure proper permissions for molecular docking executables

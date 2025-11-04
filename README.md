@@ -1,223 +1,167 @@
-# Active Learning for Molecular Docking with TabM Deep Neural Networks
+# Active Learning for Molecular Docking
 
-A production-ready active learning framework for molecular docking that combines TabM deep neural networks with Monte Carlo dropout uncertainty estimation to efficiently discover promising drug candidates from large chemical databases.
+An active learning framework for efficient virtual screening using TabM neural networks with Monte Carlo dropout uncertainty estimation and qVina2.1 molecular docking.
 
-## 🚀 Overview
+## Using in Google Colaboratory
 
-This framework implements an intelligent iterative approach for hit discovery in drug development using a modular, scalable architecture:
+Active Learning for Molecular Docking is also available in [Google Colaboratory](https://colab.research.google.com/)
+*(Coming soon)*
 
-1. **Uncertainty-Guided Selection**: Uses exploration-exploitation balance with Monte Carlo dropout uncertainty estimation to prioritize the most promising compounds
-2. **TabM Deep Learning**: Employs specialized tabular deep neural networks with batch normalization and dropout for prediction and uncertainty quantification
-3. **High-Speed Molecular Docking**: Integrates qVina2.1 (20x faster than AutoDock Vina) for accurate protein-ligand binding affinity prediction
-4. **Molecular Similarity Analysis**: Calculates RMSD using Maximum Common Substructure (MCS) and hydrogen bond pattern analysis
-5. **Automated Hyperparameter Optimization**: Built-in Optuna-based tuning for optimal model performance
+## Dependencies
 
-## ✨ Key Features
-
-- **🎯 Monte Carlo Dropout**: Reliable uncertainty estimates for compound prioritization and exploration-exploitation balance
-- **📈 Scalable Architecture**: Handles databases with 100,000+ compounds efficiently with clean modular design
-- **🧪 Intelligent Filtering**: Built-in element filtering, SMILES validation, and molecular deduplication for docking compatibility
-- **💾 Memory Management**: Automatic cleanup and optimization across active learning cycles with memory monitoring
-- **📊 Comprehensive Monitoring**: Detailed performance tracking, cycle analysis, and result persistence
-- **🔧 Auto-Tuning**: Automated hyperparameter optimization via Optuna for optimal model performance
-- **⚡ GPU Acceleration**: CUDA support with automatic CPU fallback for maximum performance
-- **🏗️ Modular Codebase**: Clean separation of concerns for maintainability and extensibility
-
-## 📐 Modular Architecture
-
-The codebase has been refactored into specialized modules for better maintainability and scalability:
-
-```
-ActiveLearning_only_tabm/
-├── main.py                      # Main entry point with YAML config support
-├── Activedocking.py             # Main orchestrator (refactored, modular design)
-├── unified_model.py             # TabM neural network with MC dropout
-├── docking_engine.py            # Molecular docking engine (qVina2.1)
-├── sample_acquisition.py        # Active learning sample selection strategies
-├── data_loader.py               # Data loading and preprocessing
-├── molecular_processing.py      # Molecular structure processing and filtering
-├── memory_manager.py            # Memory optimization and cleanup
-├── result_saver.py              # Results persistence and output management
-├── cycle_monitor.py             # Performance monitoring and analysis
-├── molecule_filter.py           # Element filtering and validation
-├── RMSD.py                      # MCS-based molecular similarity calculation
-├── Hbond.py                     # Hydrogen bond pattern analysis
-├── fingerprint.py               # Morgan fingerprint calculation
-├── exceptions.py                # Custom exception hierarchy
-├── setup.py                     # Python package setup
-├── setup_server.sh              # Automated installation script
-├── run_example.sh               # Example execution script
-├── activate_env.sh              # Environment activation helper
-├── environment.yml              # Conda environment (GPU)
-├── environment-cpu.yml          # Conda environment (CPU-only)
-├── requirements.txt             # Python dependencies
-├── inputs/                      # Example input files
-│   ├── candidates.csv           # Example compound database
-│   ├── protein.pdb              # Example protein structure
-│   └── reference.pdb            # Example reference ligand
-├── tests/                       # Test suite
-│   ├── test_framework.py        # Testing framework
-│   └── test_basic.py            # Basic functionality tests
-└── bin/qvina2.1                # High-speed docking executable
-```
-
-### 🎯 Design Principles
-
-- **Single Responsibility**: Each module handles one specific aspect of the workflow
-- **Dependency Injection**: Clean interfaces between components with proper error handling
-- **Memory Efficiency**: Automatic resource management and garbage collection
-- **Type Safety**: Comprehensive type hints throughout the codebase
-- **Error Handling**: Comprehensive exception hierarchy with meaningful error messages
-
-## 🚀 Installation
-
-### One-Click Automated Setup
-
-For new servers with automatic CUDA detection and dependency installation:
+Install the conda environment as follows:
 
 ```bash
-# 1. Clone the repository
-git clone <YOUR_REPO_URL>
-cd ActiveLearning_only_tabm
-
-# 2. Run automated setup (detects CUDA, installs all dependencies)
-chmod +x setup_server.sh
-./setup_server.sh
-
-# 3. Activate environment
-conda activate active-learning-docking
-
-# 4. Verify installation
-python main.py --help
-python -c "import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.cuda.is_available()}')"
-```
-
-### 🎯 CUDA Support Optimization
-
-The installation script automatically detects and configures:
-- **GPU Servers**: CUDA 11.8 + GPU-accelerated PyTorch installation (`environment.yml`)
-- **CPU Servers**: CPU-only PyTorch installation (`environment-cpu.yml`)
-- **Compatibility Testing**: PyTorch/CUDA operation verification and diagnostics
-
-### Manual Installation (Advanced Users)
-
-```bash
-# For GPU servers
 conda env create -f environment.yml
 conda activate active-learning-docking
+```
 
-# For CPU-only servers
-conda env create -f environment-cpu.yml
+To download qVina2.1 and prepare the environment:
+```bash
+bash install.sh
+```
+
+**Note on GPU Support:**
+The default installation uses CPU-only PyTorch. For GPU acceleration (recommended for large-scale screening):
+```bash
+conda env create -f environment-gpu.yml
 conda activate active-learning-docking
-
-# Manual qVina2.1 installation
-wget https://github.com/QVina/qvina/raw/refs/heads/master/bin/qvina2.1
-chmod +x qvina2.1
-mkdir -p bin && mv qvina2.1 bin/
-
-# Verify installation
-python main.py --help
-python -c "import rdkit; import oddt; print('RDKit and ODDT installed successfully')"
 ```
 
-### 🚀 qVina2.1 vs AutoDock Vina
+## How to run
 
-**qVina2.1 Advantages:**
-- **Speed**: Up to 20x faster than AutoDock Vina for high-throughput screening
-- **Accuracy**: Maintains equivalent binding pose prediction quality
-- **Compatibility**: Identical input/output format to AutoDock Vina
-- **Active Learning Optimized**: Designed for large-scale compound processing
-
-## 📋 Quick Start
-
-### Basic Usage
+Before running, make sure the conda environment is activated: `conda activate active-learning-docking`
 
 ```bash
-python main.py -o results \
-    -l inputs/reference.pdb \
-    -p inputs/protein.pdb \
-    -d inputs/candidates.csv
+python main.py -o OUTPUT_DIRECTORY -l LIGAND_PDB -p PROTEIN_PDB -d DATABASE_CSV
 ```
 
-### With Hyperparameter Auto-Tuning (Recommended)
+Example usage:
 
 ```bash
-python main.py -o results \
+python main.py \
+    -o ./results \
     -l inputs/reference.pdb \
     -p inputs/protein.pdb \
     -d inputs/candidates.csv \
-    --auto_tune --epochs 150
+    --batch_size 10 \
+    --n_cycles 10
 ```
 
-### Advanced Configuration with YAML
+Example with hyperparameter auto-tuning:
 
-Create a `config.yml` file with custom parameters:
+```bash
+python main.py \
+    -o ./results \
+    -l inputs/reference.pdb \
+    -p inputs/protein.pdb \
+    -d inputs/candidates.csv \
+    --auto_tune \
+    --epochs 150
+```
+
+Example with YAML configuration file:
+
+```bash
+# Create config.yml with your parameters
+python main.py --config config.yml
+```
+
+### Parameters
+
+#### Required Arguments
+
+- `-o OUTPUT_DIR` : Output directory for results
+- `-l LIGAND_PDB` : Reference ligand PDB file for RMSD calculation
+- `-p PROTEIN_PDB` : Target protein PDB file for docking
+- `-d DATABASE_CSV` : Chemical database CSV file with 'Catalog ID' and 'smiles' columns
+
+#### Active Learning Parameters
+
+- `-i INITIAL_CSV` : Initial training set CSV file (optional)
+- `-s SIMILARITY` : Molecular similarity threshold (default: 0.2)
+- `--hbond_similarity` : H-bond similarity threshold (default: 0.3)
+- `--rmsd_threshold` : RMSD threshold for valid poses (default: 2.0)
+- `--budget` : Total compound evaluation budget (default: 100,000)
+- `--batch_size` : Compounds selected per cycle (default: 10)
+- `--n_cycles` : Number of active learning cycles (default: 10)
+- `--conf_num` : Conformers per molecule (default: 1)
+
+#### TabM Neural Network Parameters
+
+- `--auto_tune` : Enable automatic hyperparameter tuning via Optuna
+- `--tuning_method` : Tuning method: 'grid' or 'random' (default: 'random')
+- `--learning_rate` : Learning rate for TabM (default: 0.001)
+- `--dropout` : Dropout rate for regularization (default: 0.2)
+- `--epochs` : Training epochs per cycle (default: 100)
+- `--batch_size_nn` : Neural network batch size (default: 256)
+- `--mc_dropout_samples` : Monte Carlo dropout samples for uncertainty (default: 50)
+
+#### Exploration Strategy
+
+- `--initial_exploration_ratio` : Initial exploration ratio (default: 0.8)
+- `--final_exploration_ratio` : Final exploration ratio (default: 0.2)
+
+#### System Settings
+
+- `--max_threads` : Maximum CPU threads for parallel processing (default: 8)
+- `--disable_element_filter` : Disable element filtering for docking compatibility
+- `--disable_deduplication` : Disable SMILES-based molecular deduplication
+
+## Results
+
+The result file is saved as `OUTPUT_DIRECTORY/final_results.csv` in CSV format. The report includes:
+- `Catalog ID`: Unique compound identifier
+- `smiles`: SMILES string of the compound
+- `docking_score`: Predicted binding affinity
+- `uncertainty`: Model uncertainty estimate
+- `similarity`: Tanimoto similarity to reference ligand
+- `rmsd`: RMSD to reference ligand pose
+
+For sub-data:
+- Active learning logs are saved as `OUTPUT_DIRECTORY/active_learning.log`
+- Cycle-specific results are saved as `OUTPUT_DIRECTORY/cycle_*/`
+- Model performance metrics are saved as `OUTPUT_DIRECTORY/cycle_performance_summary.csv`
+- Molecular docking poses are saved as `OUTPUT_DIRECTORY/pose/pose_*.pdbqt`
+
+## YAML Configuration
+
+Create a `config.yml` file for batch parameter settings:
 
 ```yaml
-# config.yml - Example configuration file
+# config.yml - Example configuration
 output_dir: "results"
 ligand: "inputs/reference.pdb"
 protein: "inputs/protein.pdb"
 database: "inputs/candidates.csv"
 
-# Active Learning parameters
+# Active Learning
 similarity: 0.2
-hbond_similarity: 0.3
 budget: 100000
 batch_size: 10
 n_cycles: 10
 
-# TabM parameters
+# TabM Neural Network
 auto_tune: false
 learning_rate: 0.001
 dropout: 0.2
 epochs: 100
-batch_size_nn: 256
 mc_dropout_samples: 50
 
-# System settings
+# System
 max_threads: 8
-initial_exploration_ratio: 0.8
-final_exploration_ratio: 0.2
 ```
 
 Then run:
-
 ```bash
 python main.py --config config.yml
 ```
 
-### Custom Active Learning Parameters
+## Input File Format
 
-```bash
-python main.py -o results \
-    -l inputs/reference.pdb \
-    -p inputs/protein.pdb \
-    -d inputs/candidates.csv \
-    --batch_size 20 \
-    --n_cycles 15 \
-    --similarity 0.3 \
-    --learning_rate 0.001 \
-    --dropout 0.3 \
-    --mc_dropout_samples 100
-```
+### Chemical Database (CSV)
 
-## 📁 Input Files
-
-### Required Files
-
-1. **Reference Ligand** (`-l/--ligand`): PDB file of known active ligand for RMSD similarity calculations
-2. **Target Protein** (`-p/--protein`): PDB file of target protein for molecular docking
-3. **Compound Database** (`-d/--database`): CSV file with required columns:
-   - `Catalog ID`: Unique compound identifier  
-   - `smiles`: SMILES string representation of molecular structure
-
-### Optional Files
-
-- **Initial Training Set** (`-i/--initial_csv`): Pre-labeled compounds for model initialization
-- **Configuration File** (`--config`): YAML configuration file for batch parameter setting
-
-### Example Database Format
+The database CSV file must contain the following columns:
 
 ```csv
 Catalog ID,smiles
@@ -226,250 +170,86 @@ ZINC000002,CC(C)Cc1ccc(C(C)C(=O)O)cc1
 ZINC000003,CC1=CC=C(C=C1)C(=O)O
 ```
 
-## ⚙️ Core Parameters
+### Example Files
 
-### Active Learning Configuration
-- `--budget`: Total compound evaluation budget (default: 100,000)
-- `--batch_size`: Compounds selected per cycle (default: 10)
-- `--n_cycles`: Number of active learning cycles (default: 10)
-- `--similarity`: Molecular similarity threshold for selection (default: 0.2)
-- `--hbond_similarity`: Hydrogen bond similarity threshold (default: 0.3)
+Example input files are provided in the `inputs/` directory:
+- `inputs/reference.pdb` - Example reference ligand
+- `inputs/protein.pdb` - Example target protein
+- `inputs/candidates.csv` - Example compound database
 
-### TabM Neural Network Parameters
-- `--learning_rate`: Adam optimizer learning rate (default: 0.001)
-- `--dropout`: Dropout rate for regularization and uncertainty (default: 0.2)
-- `--epochs`: Training epochs per cycle (default: 100)
-- `--batch_size_nn`: Neural network batch size (default: 256)
-- `--mc_dropout_samples`: Monte Carlo dropout samples for uncertainty estimation (default: 50)
+## Architecture
 
-### Exploration-Exploitation Strategy
-- `--initial_exploration_ratio`: Initial exploration ratio (default: 0.8)
-- `--final_exploration_ratio`: Final exploration ratio (default: 0.2)
-
-### Hyperparameter Optimization
-- `--auto_tune`: Enable Optuna-based automatic hyperparameter optimization
-- `--tuning_method`: Search strategy ('random' or 'grid', default: 'random')
-
-### System Configuration
-- `--max_threads`: Maximum CPU threads for parallel processing (default: 8)
-- `--disable_element_filter`: Disable element filtering for docking compatibility
-- `--disable_deduplication`: Disable SMILES-based molecular deduplication
-
-## 🏗️ Architecture Components
-
-### Core Classes
-
-#### `ActiveLearningWithConformers` (Activedocking.py)
-Main orchestrator implementing the complete active learning workflow:
-- Manages exploration-exploitation balance across iterative cycles
-- Handles molecular processing, filtering, and deduplication
-- Coordinates between TabM model training and molecular docking operations
-- Uses qVina2.1 for high-speed AutoDock Vina-compatible molecular docking
-- Implements memory management and performance monitoring
-
-#### `UnifiedModel` (unified_model.py)
-TabM deep neural network implementation:
-- PyTorch-based tabular neural network with embedding layers
-- Monte Carlo dropout for uncertainty estimation during inference
-- Automatic hyperparameter tuning via Optuna optimization
-- GPU acceleration with CUDA support and automatic CPU fallback
-- Architecture: molecular fingerprint embedding → 256-unit hidden layer → batch normalization → scalar output
-
-### Supporting Modules
-
-#### Molecular Processing
-- **RMSD.py**: Maximum Common Substructure (MCS) based RMSD calculation for molecular similarity
-- **Hbond.py**: Hydrogen bond pattern analysis for additional molecular similarity metrics
-- **molecule_filter.py**: Element filtering for docking software compatibility
-- **fingerprint.py**: Morgan fingerprint calculation with comprehensive error handling
-- **molecular_processing.py**: Unified molecular preprocessing and validation pipeline
-
-#### System Components
-- **docking_engine.py**: qVina2.1 integration for high-speed molecular docking
-- **sample_acquisition.py**: Active learning sample selection strategies with uncertainty-based prioritization
-- **data_loader.py**: Efficient data loading and preprocessing for large databases
-- **memory_manager.py**: Automatic memory management and garbage collection between cycles
-- **cycle_monitor.py**: Performance monitoring, timing analysis, and memory usage tracking
-- **result_saver.py**: Result persistence, output file management, and comprehensive reporting
-
-### Workflow Process
-
-1. **Initialization Phase**:
-   - Load compound database and validate molecular structures
-   - Initialize reference ligand and target protein for docking
-   - Set up TabM model architecture and training parameters
-
-2. **Active Learning Cycle Loop**:
-   - **Selection**: Use uncertainty estimation and molecular similarity for compound prioritization
-   - **Docking**: Perform molecular docking with qVina2.1 for binding affinity prediction
-   - **Training**: Update TabM model with new labeled data using Monte Carlo dropout
-   - **Monitoring**: Track performance metrics, memory usage, and cycle efficiency
-
-3. **Output Generation**:
-   - Generate ranked compound list based on predicted binding affinity
-   - Save comprehensive results including poses, predictions, and performance metrics
-   - Create detailed logs and analysis reports
-
-## 📊 Output Structure
-
-Results are comprehensively organized in the specified output directory:
+The framework consists of modular components:
 
 ```
-results/
-├── final_results.csv                    # Top-ranked compounds with scores
-├── active_learning.log                  # Detailed execution log with timestamps
-├── cycle_performance_summary.csv        # Performance metrics per cycle
-├── deduplication_report.csv            # Molecular deduplication statistics (if enabled)
-├── prediction_analysis.csv             # Model prediction analysis and uncertainty
-├── cycle_*/                            # Individual cycle results
-│   ├── cycle_results.csv               # Selected compounds and docking scores
-│   ├── detailed_results_with_predictions.csv  # Predictions with uncertainty
-│   └── acquisition_analysis.csv        # Sample selection analysis
-├── pose/                               # Molecular docking poses
-│   ├── pose_ZINC000001.pdbqt          # Individual compound binding poses
-│   └── ...
-└── models/                            # Trained model checkpoints
-    ├── best/                          # Best performing model across cycles
-    ├── final/                         # Final cycle model
-    └── cycle_*/                       # Cycle-specific model checkpoints
+main.py                      # Entry point
+Activedocking.py            # Active learning orchestrator
+unified_model.py            # TabM neural network with MC dropout
+docking_engine.py           # qVina2.1 integration
+sample_acquisition.py       # Sample selection strategies
+molecular_processing.py     # Molecular filtering and processing
+data_loader.py             # Data loading and preprocessing
+memory_manager.py          # Memory optimization
+cycle_monitor.py           # Performance monitoring
+result_saver.py            # Results management
 ```
 
-### Key Output Files
+Supporting modules:
+- `RMSD.py` - MCS-based RMSD calculation
+- `Hbond.py` - Hydrogen bond pattern analysis
+- `molecule_filter.py` - Element filtering and validation
+- `fingerprint.py` - Morgan fingerprint calculation
+- `exceptions.py` - Custom exception handling
 
-- **final_results.csv**: Top compounds ranked by predicted binding affinity with uncertainty estimates
-- **cycle_performance_summary.csv**: R² scores, uncertainty metrics, timing, and memory usage per cycle
-- **pose/pose_*.pdbqt**: Molecular binding poses for visualization and structural analysis
-- **active_learning.log**: Complete execution log with parameters, performance, and diagnostic information
+## Performance Notes
 
-## 🔧 Performance Optimization
+**Computational Requirements:**
+- Recommended RAM: 4-8 GB for databases with 100,000 compounds
+- CPU: Multi-core processor recommended (8+ cores)
+- GPU: Optional, speeds up neural network training significantly
 
-### Memory Management
-- Automatic garbage collection and memory cleanup between cycles
-- Limited cycle history retention to prevent memory accumulation
-- Real-time memory usage monitoring with warnings and optimization suggestions
-- Efficient data structures for large-scale molecular database processing
+**Typical Performance:**
+- Processing speed: ~1,000 compounds/hour (CPU) or ~5,000 compounds/hour (GPU)
+- Model training: Minutes per cycle (GPU) or hours per cycle (CPU)
+- Docking: Dominated by qVina2.1 performance (CPU-bound)
 
-### Computational Efficiency
-- Batch processing for molecular fingerprint calculations and neural network operations
-- GPU acceleration for TabM model training with automatic CUDA detection
-- Parallel processing for independent molecular operations and docking calculations
-- Optimized molecular similarity calculations using efficient algorithms
+**qVina2.1 vs AutoDock Vina:**
+qVina2.1 provides up to 20x faster docking with equivalent accuracy, making it ideal for high-throughput active learning workflows.
 
-### Scalability Features
-- Designed and tested for databases with 100,000+ compounds
-- Linear scaling performance with compound database size
-- Memory-efficient batch processing for large datasets
-- Optimized data structures and algorithms for high-throughput screening
+## Troubleshooting
 
-## 📈 Example Performance
+### Installation Issues
 
-Typical performance metrics on drug discovery datasets:
-
-- **Hit Enrichment**: 10-50x improvement over random compound selection
-- **Model Accuracy**: R² > 0.8 for well-structured molecular datasets
-- **Computational Efficiency**: ~1,000 compounds/hour on modern hardware with GPU acceleration
-- **Memory Usage**: ~2-4 GB RAM for 100,000 compound databases
-- **Uncertainty Calibration**: Well-calibrated uncertainty estimates for reliable compound prioritization
-
-## 🚨 Troubleshooting
-
-### Installation Verification
-
-Run the following commands to verify your installation:
-
+If you encounter dependency conflicts:
 ```bash
-# Test basic imports
-python -c "
-from Activedocking import ActiveLearningWithConformers
-from unified_model import UnifiedModel
-import rdkit, oddt, torch
-print('✓ All core modules imported successfully')
-print(f'✓ PyTorch {torch.__version__}')
-print(f'✓ CUDA available: {torch.cuda.is_available()}')
-"
+# Clean conda cache
+conda clean --all
 
-# Test qVina2.1
-./bin/qvina2.1 --version
-
-# Run example to ensure everything works
-chmod +x run_example.sh
-./run_example.sh
-```
-
-This verification checks:
-- Python environment and all required packages
-- CUDA compatibility and GPU operations
-- Molecular libraries (RDKit, ODDT, Biopython)
-- Docking tools (qVina2.1 executable and permissions)
-- Project module loading and imports
-
-### Common Issues and Solutions
-
-#### 1. CUDA/PyTorch Compatibility Issues
-
-**Symptoms**: GPU not detected, CUDA version conflicts, libcublas errors
-
-```bash
-# Diagnose CUDA issues
-python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}, Device count: {torch.cuda.device_count()}')"
-
-# Check CUDA system compatibility
-nvidia-smi
-nvcc --version
-
-# Complete CUDA environment reinstallation
+# Retry installation
 conda env remove -n active-learning-docking
-./setup_server.sh
-
-# CPU-only fallback installation
-conda env create -f environment-cpu.yml
-conda activate active-learning-docking
+conda env create -f environment.yml
 ```
 
-#### 2. Missing qVina2.1 Executable
-
-**Symptoms**: "qvina2.1 not found" or permission denied errors
+### Missing qVina2.1
 
 ```bash
-# Automatic qVina2.1 installation
-./setup_server.sh
-
 # Manual installation
 wget https://github.com/QVina/qvina/raw/refs/heads/master/bin/qvina2.1
 chmod +x qvina2.1
 mkdir -p bin && mv qvina2.1 bin/
-
-# Fix permissions
-chmod +x bin/qvina2.1
 ```
 
-#### 3. Memory Issues
+### Memory Issues
 
-**Symptoms**: Out of memory errors, system freezing
-
+For memory-constrained systems:
 ```bash
-# Reduce batch sizes for memory-constrained systems
-python main.py --batch_size 5 --batch_size_nn 128
-
-# Monitor memory usage during execution
-python -c "import psutil; print(f'Available RAM: {psutil.virtual_memory().available / 1024**3:.1f} GB')"
-
-# Check system resources
-free -h
-df -h
+python main.py --batch_size 5 --batch_size_nn 64
 ```
 
-#### 4. Invalid Molecular Data
+### Invalid SMILES
 
-**Symptoms**: SMILES parsing errors, docking failures
-
+Check your database format:
 ```bash
-# Enable detailed molecular filtering
-python main.py --disable_element_filter
-
-# Check database format
-head -5 inputs/candidates.csv
-
 # Validate SMILES strings
 python -c "
 import pandas as pd
@@ -480,88 +260,14 @@ print(f'Invalid SMILES at rows: {invalid[:10]}')
 "
 ```
 
-#### 5. General Installation Problems
-
-```bash
-# Fix file permissions
-chmod +x setup_server.sh
-chmod +x bin/qvina2.1
-
-# Clean conda environment
-conda clean --all
-conda update conda
-
-# Complete reinstallation
-conda env remove -n active-learning-docking
-rm -rf ~/.conda/envs/active-learning-docking
-./setup_server.sh
-
-# Check detailed logs
-tail -f results/active_learning.log
-```
-
-### Performance Optimization Tips
-
-1. **GPU Acceleration**: Verify GPU with `python -c "import torch; print(torch.cuda.is_available())"`
-2. **Auto-Tuning**: Use `--auto_tune` for optimal hyperparameter configuration
-3. **Memory Management**: Monitor logs for memory warnings and adjust batch sizes accordingly
-4. **Batch Processing**: Increase `--batch_size_nn` for better GPU utilization
-5. **CPU Threads**: Adjust `--max_threads` based on your CPU core count
-
-## 🤝 Contributing
-
-We welcome contributions to improve the framework:
-
-1. **Fork the Repository**: Create your own fork for development
-2. **Create Feature Branch**: `git checkout -b feature-name`
-3. **Follow Coding Standards**: Maintain consistent code style and documentation
-4. **Add Comprehensive Tests**: Include tests for new functionality
-5. **Submit Pull Request**: Provide detailed description of changes and improvements
-
-### Development Setup
-
-```bash
-# Install development dependencies
-conda activate active-learning-docking
-pip install -e .[dev]
-
-# Run tests
-python -m pytest tests/
-
-# Check code style
-black --check .
-flake8 .
-mypy .
-```
-
-## 📚 Citation
-
-If you use this framework in your research, please cite:
-
-```bibtex
-@article{ActiveLearningDocking2024,
-  title={Active Learning for Molecular Docking with TabM Deep Neural Networks and Monte Carlo Dropout},
-  author={Active Learning Molecular Docking Research Team},
-  journal={Journal of Chemical Information and Modeling},
-  year={2024},
-  doi={10.1021/acs.jcim.XXXXXXX}
-}
-```
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📞 Support
+## Contact
 
-For questions, issues, and support:
-
-- **Installation Issues**: Verify installation using commands in the Troubleshooting section
-- **Usage Questions**: Check the comprehensive documentation and examples above
-- **Bug Reports**: Open an issue on the project repository with detailed logs from `results/active_learning.log`
-- **Performance Issues**: Review the troubleshooting section and optimization guidelines
-- **Example Data**: Use the provided example files in `inputs/` directory for testing
+For more information, check the [GitHub repository](https://github.com/YOUR_USERNAME/ActiveLearning_only_tabm)
 
 ---
 
-*This implementation represents a production-ready, research-grade active learning framework specifically optimized for molecular docking applications in computational drug discovery. The modular architecture, comprehensive testing, and automated optimization make it suitable for both academic research and industrial applications.*
+*This framework combines active learning with molecular docking for efficient hit discovery in drug development.*
