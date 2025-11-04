@@ -45,6 +45,7 @@ class ActiveLearningWithConformers(ResultSaverMixin):
                  n_cycles: int = 10,
                  conf_num: int = 1,
                  hbond_similarity_threshold: float = 0.5,
+                 rmsd_threshold: float = 2.0,
                  initial_csv: Optional[str] = None,
                  # 필터링 옵션
                  enable_element_filter: bool = True,
@@ -73,6 +74,7 @@ class ActiveLearningWithConformers(ResultSaverMixin):
             n_cycles: 능동학습 사이클 수
             conf_num: 생성할 형태 수
             hbond_similarity_threshold: H-bond 유사도 임계값
+            rmsd_threshold: RMSD 임계값 (유효한 포즈 판별)
             initial_csv: 초기 화합물 CSV (선택사항)
             enable_element_filter: 원소 필터링 활성화
             enable_deduplication: 중복제거 활성화
@@ -101,6 +103,7 @@ class ActiveLearningWithConformers(ResultSaverMixin):
         self.n_cycles = n_cycles
         self.conf_num = conf_num
         self.hbond_similarity_threshold = hbond_similarity_threshold
+        self.rmsd_threshold = rmsd_threshold
         
         # 포즈 디렉터리 설정
         self.pose_dir = os.path.join(output_dir, 'pose')
@@ -164,7 +167,7 @@ class ActiveLearningWithConformers(ResultSaverMixin):
         
         # 5. 품질 필터
         self.quality_filter = QualityFilter(
-            rmsd_threshold=2.0,
+            rmsd_threshold=self.rmsd_threshold,
             hbond_threshold=self.hbond_similarity_threshold
         )
         
@@ -333,10 +336,10 @@ class ActiveLearningWithConformers(ResultSaverMixin):
                 successful_docking += 1
         
         # 유효한 포즈 카운트
-        valid_initial = len(self.docking_engine.get_valid_compounds(2.0, self.hbond_similarity_threshold))
-        
+        valid_initial = len(self.docking_engine.get_valid_compounds(self.rmsd_threshold, self.hbond_similarity_threshold))
+
         logging.info(f"Initial docking completed. Successful: {successful_docking}")
-        logging.info(f"Valid poses (RMSD ≤ 2.0, HBond ≥ {self.hbond_similarity_threshold}): {valid_initial}")
+        logging.info(f"Valid poses (RMSD ≤ {self.rmsd_threshold}, HBond ≥ {self.hbond_similarity_threshold}): {valid_initial}")
         
         return successful_docking
     
@@ -388,7 +391,7 @@ class ActiveLearningWithConformers(ResultSaverMixin):
                 cid in self.docking_engine.interaction_data):
                 
                 interaction = self.docking_engine.interaction_data[cid]
-                if (interaction['rmsd'] <= 2.0 and
+                if (interaction['rmsd'] <= self.rmsd_threshold and
                     interaction['hbond_similarity'] >= self.hbond_similarity_threshold):
                     valid_indices.append(idx)
         
@@ -585,7 +588,7 @@ class ActiveLearningWithConformers(ResultSaverMixin):
             for cid, score in self.docking_engine.docking_scores.items():
                 if cid in self.docking_engine.interaction_data:
                     interaction = self.docking_engine.interaction_data[cid]
-                    if (interaction['rmsd'] <= 2.0 and
+                    if (interaction['rmsd'] <= self.rmsd_threshold and
                         interaction['hbond_similarity'] >= self.hbond_similarity_threshold):
                         filtered_results.append((cid, score))
             

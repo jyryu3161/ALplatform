@@ -235,6 +235,8 @@ large_datasets/
 !inputs/
 inputs/large_*
 inputs/*_large*
+inputs/*Enamine*
+inputs/STK33_ref.csv
 
 # Temporary files
 temp/
@@ -286,3 +288,10 @@ fingerprint_cache/
 
 # Development documentation
 REFACTORING_SUMMARY.md
+
+# Legacy and development files
+Activedocking_legacy.py
+active_learning_orchestrator.py
+test_installation.py
+test_refactoring.py
+config.yml

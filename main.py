@@ -82,6 +82,8 @@ Examples:
                          help="Molecular similarity threshold (default: 0.2)")
     al_group.add_argument('--hbond_similarity', type=float, default=0.3,
                          help="H-bond similarity threshold (default: 0.3)")
+    al_group.add_argument('--rmsd_threshold', type=float, default=2.0,
+                         help="RMSD threshold for valid poses (default: 2.0)")
     al_group.add_argument('--budget', type=int, default=100000,
                          help="Total compound budget (default: 100000)")
     al_group.add_argument('--batch_size', type=int, default=10,
@@ -197,6 +199,7 @@ Examples:
     logging.info(f"   Cycles: {args.n_cycles}")
     logging.info(f"   Similarity threshold: {args.similarity}")
     logging.info(f"   H-bond threshold: {args.hbond_similarity}")
+    logging.info(f"   RMSD threshold: {args.rmsd_threshold}")
     
     logging.info(f"NEURAL NETWORK PARAMETERS:")
     logging.info(f"   Learning rate: {args.learning_rate}")
@@ -222,6 +225,7 @@ Examples:
             output_dir=args.output_dir,
             similarity_threshold=args.similarity,
             hbond_similarity_threshold=args.hbond_similarity,
+            rmsd_threshold=args.rmsd_threshold,
             initial_csv=args.initial_csv,
             enable_element_filter=not args.disable_element_filter,
             enable_deduplication=not args.disable_deduplication,

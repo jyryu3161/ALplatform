@@ -196,7 +196,7 @@ class ResultSaverMixin:
                 cid = self.cids[idx]
                 if (cid in self.docking_engine.docking_scores and 
                     cid in self.docking_engine.interaction_data and 
-                    self.docking_engine.interaction_data[cid]['rmsd'] <= 2.0 and
+                    self.docking_engine.interaction_data[cid]['rmsd'] <= self.rmsd_threshold and
                     self.docking_engine.interaction_data[cid]['hbond_similarity'] >= self.hbond_similarity_threshold):
                     
                     writer.writerow([
@@ -227,7 +227,7 @@ class ResultSaverMixin:
                     continue
 
                 if (cid in self.docking_engine.interaction_data and 
-                    self.docking_engine.interaction_data[cid]['rmsd'] <= 2.0 and
+                    self.docking_engine.interaction_data[cid]['rmsd'] <= self.rmsd_threshold and
                     self.docking_engine.interaction_data[cid]['hbond_similarity'] >= self.hbond_similarity_threshold):
                     
                     writer.writerow([

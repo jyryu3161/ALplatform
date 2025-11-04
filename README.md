@@ -30,7 +30,7 @@ The codebase has been refactored into specialized modules for better maintainabi
 ```
 ActiveLearning_only_tabm/
 ├── main.py                      # Main entry point with YAML config support
-├── Activedocking.py             # Main orchestrator (refactored, 300 lines)
+├── Activedocking.py             # Main orchestrator (refactored, modular design)
 ├── unified_model.py             # TabM neural network with MC dropout
 ├── docking_engine.py            # Molecular docking engine (qVina2.1)
 ├── sample_acquisition.py        # Active learning sample selection strategies
@@ -44,11 +44,20 @@ ActiveLearning_only_tabm/
 ├── Hbond.py                     # Hydrogen bond pattern analysis
 ├── fingerprint.py               # Morgan fingerprint calculation
 ├── exceptions.py                # Custom exception hierarchy
+├── setup.py                     # Python package setup
 ├── setup_server.sh              # Automated installation script
-├── test_installation.py         # Comprehensive installation verification
+├── run_example.sh               # Example execution script
+├── activate_env.sh              # Environment activation helper
 ├── environment.yml              # Conda environment (GPU)
 ├── environment-cpu.yml          # Conda environment (CPU-only)
-├── config.yml                   # Configuration file example
+├── requirements.txt             # Python dependencies
+├── inputs/                      # Example input files
+│   ├── candidates.csv           # Example compound database
+│   ├── protein.pdb              # Example protein structure
+│   └── reference.pdb            # Example reference ligand
+├── tests/                       # Test suite
+│   ├── test_framework.py        # Testing framework
+│   └── test_basic.py            # Basic functionality tests
 └── bin/qvina2.1                # High-speed docking executable
 ```
 
@@ -75,12 +84,12 @@ cd ActiveLearning_only_tabm
 chmod +x setup_server.sh
 ./setup_server.sh
 
-# 3. Verify installation (highly recommended)
-python test_installation.py
-
-# 4. Activate environment and test
+# 3. Activate environment
 conda activate active-learning-docking
+
+# 4. Verify installation
 python main.py --help
+python -c "import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.cuda.is_available()}')"
 ```
 
 ### 🎯 CUDA Support Optimization
@@ -107,7 +116,8 @@ chmod +x qvina2.1
 mkdir -p bin && mv qvina2.1 bin/
 
 # Verify installation
-python test_installation.py
+python main.py --help
+python -c "import rdkit; import oddt; print('RDKit and ODDT installed successfully')"
 ```
 
 ### 🚀 qVina2.1 vs AutoDock Vina
@@ -141,8 +151,39 @@ python main.py -o results \
 
 ### Advanced Configuration with YAML
 
+Create a `config.yml` file with custom parameters:
+
+```yaml
+# config.yml - Example configuration file
+output_dir: "results"
+ligand: "inputs/reference.pdb"
+protein: "inputs/protein.pdb"
+database: "inputs/candidates.csv"
+
+# Active Learning parameters
+similarity: 0.2
+hbond_similarity: 0.3
+budget: 100000
+batch_size: 10
+n_cycles: 10
+
+# TabM parameters
+auto_tune: false
+learning_rate: 0.001
+dropout: 0.2
+epochs: 100
+batch_size_nn: 256
+mc_dropout_samples: 50
+
+# System settings
+max_threads: 8
+initial_exploration_ratio: 0.8
+final_exploration_ratio: 0.2
+```
+
+Then run:
+
 ```bash
-# Create config.yml with custom parameters
 python main.py --config config.yml
 ```
 
@@ -334,19 +375,33 @@ Typical performance metrics on drug discovery datasets:
 
 ### Installation Verification
 
-Always run the comprehensive installation test after setup:
+Run the following commands to verify your installation:
 
 ```bash
-python test_installation.py
+# Test basic imports
+python -c "
+from Activedocking import ActiveLearningWithConformers
+from unified_model import UnifiedModel
+import rdkit, oddt, torch
+print('✓ All core modules imported successfully')
+print(f'✓ PyTorch {torch.__version__}')
+print(f'✓ CUDA available: {torch.cuda.is_available()}')
+"
+
+# Test qVina2.1
+./bin/qvina2.1 --version
+
+# Run example to ensure everything works
+chmod +x run_example.sh
+./run_example.sh
 ```
 
-This diagnostic script comprehensively tests:
+This verification checks:
 - Python environment and all required packages
 - CUDA compatibility and GPU operations
 - Molecular libraries (RDKit, ODDT, Biopython)
 - Docking tools (qVina2.1 executable and permissions)
 - Project module loading and imports
-- Configuration file validation
 
 ### Common Issues and Solutions
 
@@ -356,7 +411,11 @@ This diagnostic script comprehensively tests:
 
 ```bash
 # Diagnose CUDA issues
-python test_installation.py
+python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}, Device count: {torch.cuda.device_count()}')"
+
+# Check CUDA system compatibility
+nvidia-smi
+nvcc --version
 
 # Complete CUDA environment reinstallation
 conda env remove -n active-learning-docking
@@ -364,10 +423,7 @@ conda env remove -n active-learning-docking
 
 # CPU-only fallback installation
 conda env create -f environment-cpu.yml
-
-# Check CUDA system compatibility
-nvidia-smi
-nvcc --version
+conda activate active-learning-docking
 ```
 
 #### 2. Missing qVina2.1 Executable
@@ -395,8 +451,8 @@ chmod +x bin/qvina2.1
 # Reduce batch sizes for memory-constrained systems
 python main.py --batch_size 5 --batch_size_nn 128
 
-# Monitor memory usage
-python test_installation.py
+# Monitor memory usage during execution
+python -c "import psutil; print(f'Available RAM: {psutil.virtual_memory().available / 1024**3:.1f} GB')"
 
 # Check system resources
 free -h
@@ -446,10 +502,11 @@ tail -f results/active_learning.log
 
 ### Performance Optimization Tips
 
-1. **GPU Acceleration**: Verify GPU usage with `python test_installation.py`
+1. **GPU Acceleration**: Verify GPU with `python -c "import torch; print(torch.cuda.is_available())"`
 2. **Auto-Tuning**: Use `--auto_tune` for optimal hyperparameter configuration
 3. **Memory Management**: Monitor logs for memory warnings and adjust batch sizes accordingly
-4. **CUDA Diagnostics**: Comprehensive GPU testing and compatibility verification
+4. **Batch Processing**: Increase `--batch_size_nn` for better GPU utilization
+5. **CPU Threads**: Adjust `--max_threads` based on your CPU core count
 
 ## 🤝 Contributing
 
@@ -499,10 +556,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For questions, issues, and support:
 
-- **Installation Issues**: Run `python test_installation.py` for automated diagnostics
+- **Installation Issues**: Verify installation using commands in the Troubleshooting section
 - **Usage Questions**: Check the comprehensive documentation and examples above
-- **Bug Reports**: Open an issue on the project repository with detailed logs
+- **Bug Reports**: Open an issue on the project repository with detailed logs from `results/active_learning.log`
 - **Performance Issues**: Review the troubleshooting section and optimization guidelines
+- **Example Data**: Use the provided example files in `inputs/` directory for testing
 
 ---
 

@@ -83,6 +83,7 @@ TabMNetwork implementation:
 - `--n_cycles`: Number of active learning cycles (default: 10)
 - `--similarity`: Molecular similarity threshold for candidate selection (default: 0.2)
 - `--hbond_similarity`: H-bond similarity threshold (default: 0.3)
+- `--rmsd_threshold`: RMSD threshold for valid poses (default: 2.0)
 
 ### TabM Neural Network
 - `--learning_rate`: Adam optimizer learning rate (default: 0.001)
