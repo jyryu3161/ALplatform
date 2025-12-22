@@ -64,7 +64,7 @@ Examples:
     required.add_argument('-p', '--protein', default=None,
                          help="Target protein PDB file") 
     required.add_argument('-d', '--database', default=None,
-                         help="Chemical database CSV file")
+                         help="Chemical database (CSV file or directory containing CSV files)")
     
     # ===== 튜닝 옵션 =====
     tuning_group = parser.add_argument_group('Hyperparameter Tuning')

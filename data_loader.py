@@ -8,6 +8,7 @@ CSV 파일로부터 화학 구조 데이터를 로딩하고,
 import os
 import logging
 import gc
+import glob
 from typing import Dict, Optional, Tuple, List
 import pandas as pd
 import numpy as np
@@ -270,6 +271,117 @@ class CSVDataLoader:
         if self.enable_deduplication and self.deduplicator is not None:
             self.deduplicator.save_report(output_dir)
 
+    def load_directory(self, directory_path: str, library_name: str = "main") -> Dict[str, str]:
+        """
+        디렉터리 내 모든 CSV 파일을 로딩하고 병합합니다.
+
+        Args:
+            directory_path: CSV 파일들이 있는 디렉터리 경로
+            library_name: 라이브러리 이름 (로깅용)
+
+        Returns:
+            병합된 {cid: smiles} 딕셔너리
+
+        Raises:
+            DataLoadingError: 디렉터리가 없거나 CSV 파일이 없는 경우
+        """
+        if not os.path.exists(directory_path):
+            raise DataLoadingError(f"Directory not found: {directory_path}")
+
+        if not os.path.isdir(directory_path):
+            raise DataLoadingError(f"Path is not a directory: {directory_path}")
+
+        # 디렉터리 내 모든 CSV 파일 검색
+        csv_files = glob.glob(os.path.join(directory_path, "*.csv"))
+
+        if not csv_files:
+            raise DataLoadingError(f"No CSV files found in directory: {directory_path}")
+
+        csv_files = sorted(csv_files)  # 일관된 순서로 처리
+        logging.info(f"Loading chemical database from directory: {directory_path}")
+        logging.info(f"Found {len(csv_files)} CSV files to process")
+
+        # 각 CSV 파일을 개별 처리
+        libraries = []
+        file_stats = {}
+
+        for idx, csv_file in enumerate(csv_files, 1):
+            file_basename = os.path.basename(csv_file)
+            logging.info(f"Processing file {idx}/{len(csv_files)}: {file_basename}")
+
+            file_library_name = f"{library_name}_{idx}"
+
+            try:
+                # CSV 로딩
+                molecule_dict = self.load_csv(csv_file, file_library_name)
+                libraries.append(molecule_dict)
+
+                # 파일별 통계 저장
+                file_stats[file_basename] = {
+                    'original_count': len(molecule_dict),
+                    'library_name': file_library_name
+                }
+
+            except Exception as e:
+                logging.warning(f"Failed to load {file_basename}: {str(e)}")
+                continue
+
+        if not libraries:
+            raise DataLoadingError(f"Failed to load any valid CSV files from {directory_path}")
+
+        # 라이브러리 병합
+        logging.info(f"Merging {len(libraries)} processed libraries...")
+        merged_library = self.merge_libraries(libraries)
+
+        # 병합 통계 업데이트
+        self.loading_stats[library_name] = {
+            'directory': directory_path,
+            'num_files': len(csv_files),
+            'num_loaded_files': len(libraries),
+            'file_stats': file_stats,
+            'merged_count': len(merged_library)
+        }
+
+        logging.info(f"{library_name} directory loaded: {len(merged_library):,} compounds from {len(libraries)} files")
+
+        return merged_library
+
+    def merge_libraries(self, libraries: List[Dict[str, str]]) -> Dict[str, str]:
+        """
+        여러 라이브러리 딕셔너리를 병합하면서 중복을 처리합니다.
+
+        Args:
+            libraries: {cid: smiles} 딕셔너리들의 리스트
+
+        Returns:
+            병합된 {cid: smiles} 딕셔너리
+        """
+        if not libraries:
+            return {}
+
+        if len(libraries) == 1:
+            return libraries[0]
+
+        merged = {}
+        duplicate_cids = 0
+        total_before_merge = sum(len(lib) for lib in libraries)
+
+        for library in libraries:
+            for cid, smiles in library.items():
+                if cid in merged:
+                    duplicate_cids += 1
+                    # 중복된 CID가 있으면 첫 번째 것을 유지
+                    logging.debug(f"Duplicate CID found during merge: {cid}")
+                else:
+                    merged[cid] = smiles
+
+        logging.info(f"Global merge: {total_before_merge:,} → {len(merged):,} compounds")
+
+        if duplicate_cids > 0:
+            logging.info(f"  - Cross-file duplicates removed: {duplicate_cids:,}")
+
+        return merged
+
 
 class MolecularDataLoader:
     """
@@ -315,17 +427,42 @@ class MolecularDataLoader:
             return ref_smiles
         except Exception as e:
             raise DataLoadingError(f"Failed to extract reference SMILES from {self.ligand_file}: {str(e)}")
-    
-    def load_and_process(self, 
-                        main_csv: str, 
+
+    def _detect_path_type(self, path: str) -> Tuple[str, str]:
+        """
+        경로가 파일인지 디렉터리인지 감지합니다.
+
+        Args:
+            path: 검사할 경로
+
+        Returns:
+            ('file', path) 또는 ('directory', path) 튜플
+
+        Raises:
+            DataLoadingError: 경로가 존재하지 않거나 유효하지 않은 경우
+        """
+        if not os.path.exists(path):
+            raise DataLoadingError(f"Path does not exist: {path}")
+
+        if os.path.isfile(path):
+            return ('file', path)
+        elif os.path.isdir(path):
+            return ('directory', path)
+        else:
+            raise DataLoadingError(f"Path is neither a file nor a directory: {path}")
+
+    def load_and_process(self,
+                        main_csv: str,
                         initial_csv: Optional[str] = None) -> Tuple[Dict[str, str], List[str]]:
         """
         메인 라이브러리와 초기 CSV를 로딩하고 통합 전처리를 수행합니다.
-        
+
+        메인 라이브러리는 CSV 파일 또는 CSV 파일들이 있는 디렉터리로 제공할 수 있습니다.
+
         Args:
-            main_csv: 메인 라이브러리 CSV 파일
-            initial_csv: 초기 화합물 CSV 파일 (선택사항)
-            
+            main_csv: 메인 라이브러리 CSV 파일 또는 디렉터리 경로
+            initial_csv: 초기 화합물 CSV 파일 (선택사항, 파일만 가능)
+
         Returns:
             (통합된 {cid: smiles} 딕셔너리, 무효한 SMILES 리스트)
         """
@@ -357,24 +494,42 @@ class MolecularDataLoader:
         
         return combined_library, all_invalid_smiles
     
-    def _process_library(self, csv_file: str, library_name: str) -> Dict[str, str]:
-        """단일 라이브러리를 최적화된 순서로 처리합니다."""
-        # 1단계: CSV 로딩
-        raw_data = self.csv_loader.load_csv(csv_file, library_name)
-        
+    def _process_library(self, path: str, library_name: str) -> Dict[str, str]:
+        """
+        라이브러리를 최적화된 순서로 처리합니다.
+
+        파일 또는 디렉터리에서 데이터를 로딩하고 필터링 파이프라인을 적용합니다.
+
+        Args:
+            path: CSV 파일 경로 또는 CSV 파일들이 있는 디렉터리 경로
+            library_name: 라이브러리 이름 (로깅 및 통계용)
+
+        Returns:
+            필터링된 {cid: smiles} 딕셔너리
+        """
+        # 1단계: 경로 유형 감지 및 CSV 로딩
+        path_type, validated_path = self._detect_path_type(path)
+
+        if path_type == 'file':
+            logging.info(f"Loading {library_name} library from CSV file: {os.path.basename(path)}")
+            raw_data = self.csv_loader.load_csv(validated_path, library_name)
+        else:  # path_type == 'directory'
+            logging.info(f"Loading {library_name} library from directory: {path}")
+            raw_data = self.csv_loader.load_directory(validated_path, library_name)
+
         # 2단계: 중복제거 (가장 효율적인 첫 번째 필터)
         dedup_data = self.csv_loader.apply_deduplication(raw_data, library_name)
-        
+
         # 3단계: 유사도 필터링 (중복 제거 후 더 적은 수에 대해)
         similar_data = self.similarity_filter.filter_by_similarity(dedup_data)
-        
+
         # 4단계: 원소 필터링 (가장 빠른 마지막 필터)
         final_data = self.csv_loader.apply_element_filter(similar_data, library_name)
-        
+
         # 메모리 정리
         del raw_data, dedup_data, similar_data
         gc.collect()
-        
+
         return final_data
     
     def _combine_libraries(self, main_library: Dict[str, str], 

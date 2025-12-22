@@ -25,7 +25,9 @@ conda activate active-learning-docking
 
 ## Input File Format
 
-### Chemical Database (CSV)
+### Chemical Database (CSV or Directory)
+
+**Option 1: Single CSV File**
 
 The database CSV file must contain the following columns:
 
@@ -35,6 +37,24 @@ ZINC000001,CCCc1ccc(O)cc1
 ZINC000002,CC(C)Cc1ccc(C(C)C(=O)O)cc1
 ZINC000003,CC1=CC=C(C=C1)C(=O)O
 ```
+
+**Option 2: Directory with Multiple CSV Files**
+
+You can also provide a directory path containing multiple CSV files. All CSV files in the directory will be automatically loaded and merged:
+
+```
+inputs/csvs/
+├── library1.csv
+├── library2.csv
+└── library3.csv
+```
+
+Usage:
+```bash
+python main.py -d inputs/csvs/ -l ligand.pdb -p protein.pdb -o results
+```
+
+All files must have the same format (Catalog ID and smiles columns). Duplicate Catalog IDs across files will be automatically removed during the merge process.
 
 ### Example Files
 
@@ -75,37 +95,49 @@ python main.py \
     --epochs 150
 ```
 
-Example with YAML configuration file:
+### Using Configuration Files
 
+Three example YAML configuration files are provided for different use cases:
+
+**1. config_basic.yaml** - Basic configuration with essential parameters
 ```bash
-# Create config.yml with your parameters
-python main.py --config config.yml
+python main.py --config config_basic.yaml
 ```
 
-**YAML Configuration Example:**
+**2. config_full.yaml** - Complete configuration with all parameters and detailed comments
+```bash
+python main.py --config config_full.yaml
+```
 
+**3. config_autotune.yaml** - Configuration with automatic hyperparameter tuning enabled
+```bash
+python main.py --config config_autotune.yaml
+```
+
+**Override YAML settings with command-line arguments:**
+```bash
+# Command-line arguments take priority over YAML settings
+python main.py --config config_basic.yaml --epochs 200 --batch_size 15
+```
+
+**Example: Using directory input with YAML**
+
+You can set the database to a directory in your YAML file:
 ```yaml
-# config.yml - Example configuration
+# config_basic.yaml
 output_dir: "results"
 ligand: "inputs/reference.pdb"
 protein: "inputs/protein.pdb"
-database: "inputs/candidates.csv"
+database: "inputs/csvs/"  # Directory with multiple CSV files
 
-# Active Learning
-similarity: 0.2
-budget: 100000
 batch_size: 10
 n_cycles: 10
+similarity: 0.2
+```
 
-# TabM Neural Network
-auto_tune: false
-learning_rate: 0.001
-dropout: 0.2
-epochs: 100
-mc_dropout_samples: 50
-
-# System
-max_threads: 8
+Then run:
+```bash
+python main.py --config config_basic.yaml
 ```
 
 ## Parameters
@@ -115,7 +147,9 @@ max_threads: 8
 - `-o OUTPUT_DIR` : Output directory for results
 - `-l LIGAND_PDB` : Reference ligand PDB file for RMSD calculation
 - `-p PROTEIN_PDB` : Target protein PDB file for docking
-- `-d DATABASE_CSV` : Chemical database CSV file with 'Catalog ID' and 'smiles' columns
+- `-d DATABASE` : Chemical database (CSV file or directory containing CSV files)
+  - Single file: `inputs/candidates.csv`
+  - Directory: `inputs/csvs/` (automatically merges all CSV files)
 
 ### Active Learning Parameters
 
