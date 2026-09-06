@@ -49,6 +49,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.ruff_cache/
 cover/
 
 # Translations
@@ -286,12 +287,14 @@ fingerprint_cache/
 *.prof
 *.profile
 
-# Development documentation
-REFACTORING_SUMMARY.md
-
-# Legacy and development files
-Activedocking_legacy.py
-active_learning_orchestrator.py
-test_installation.py
-test_refactoring.py
-config.yml
+# Reproducibility runs and local environments
+.venv*/
+artifacts/
+!examples/*.pdbqt
+!examples/*provenance.json
+!examples/data/
+!examples/data/*.csv
+!examples/data/*.pdb
+!examples/data/*.pdbqt
+!examples/data/*.json
+!examples/data/receptor.preparation.log

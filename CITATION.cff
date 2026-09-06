@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, cite the archived version you ran and the TabM and docking methods listed in README.md."
+title: "Active Learning for Molecular Docking"
+version: "2.0.0"
+license: MIT
+authors:
+  - family-names: "Ryu"
+    given-names: "Jae Yong"
+    email: "jyryu@ssu.ac.kr"
+abstract: "Configuration-driven, reproducible active learning using official TabM ensembles and Vina or QVina docking."
+repository-code: "https://github.com/jyryu3161/Active_learning_docking"

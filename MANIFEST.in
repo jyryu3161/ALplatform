@@ -1,0 +1,8 @@
+include README.md LICENSE CITATION.cff constraints-tested.txt
+include config*.yaml environment*.yml requirements.txt
+include run_example.sh install.sh activate_env.sh setup_server.sh
+include inputs/candidates.csv inputs/protein.pdb inputs/reference.pdb
+include bin/qvina2.1
+recursive-include examples *.py *.yaml *.csv *.json *.pdb *.pdbqt *.log
+recursive-include scripts *.py
+recursive-include tests *.py

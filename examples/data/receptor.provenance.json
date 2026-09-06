@@ -1,0 +1,109 @@
+{
+  "source": "inputs/protein.pdb",
+  "source_sha256": "fe1d616f1324a7b347a2217a16b68b8120b2700a2efe233e548d835a401dbdc4",
+  "output": "examples/data/receptor.pdbqt",
+  "seed": 42,
+  "cpu": 1,
+  "repair_missing_atoms": true,
+  "meeko": "0.7.1",
+  "charge_model": "gasteiger",
+  "deleted_residues": [],
+  "rebuilt_residues": false,
+  "command": [
+    "scripts/prepare_receptor.py",
+    "--input",
+    "inputs/protein.pdb",
+    "--output",
+    "examples/data/receptor.pdbqt",
+    "--repair-missing-atoms",
+    "--ph",
+    "7.4",
+    "--seed",
+    "42",
+    "--cpu",
+    "1"
+  ],
+  "missing_atoms": {
+    "A:100": [
+      "CG",
+      "CD",
+      "CE",
+      "NZ"
+    ],
+    "A:107": [
+      "CG",
+      "CD",
+      "OE1",
+      "OE2"
+    ],
+    "A:155": [
+      "OG"
+    ],
+    "A:158": [
+      "CG",
+      "CD",
+      "CE",
+      "NZ"
+    ],
+    "A:161": [
+      "CG",
+      "CD",
+      "OE1",
+      "OE2"
+    ],
+    "A:272": [
+      "CG",
+      "CD",
+      "CE",
+      "NZ"
+    ],
+    "A:298": [
+      "CG",
+      "ND1",
+      "CE1",
+      "NE2",
+      "CD2"
+    ],
+    "A:329": [
+      "CG",
+      "CD",
+      "OE1",
+      "OE2"
+    ],
+    "A:330": [
+      "CG",
+      "CD",
+      "CE",
+      "NZ"
+    ],
+    "A:343": [
+      "CG",
+      "CD",
+      "OE1",
+      "OE2"
+    ]
+  },
+  "missing_terminal_atoms": {
+    "A:382": [
+      "OXT"
+    ]
+  },
+  "prepared_pdb": "examples/data/receptor.prepared.pdb",
+  "prepared_pdb_sha256": "5da441bbd41b486006e0d61d0c5c539a469e5783b25935a286f74529e37fa8e0",
+  "pdbfixer": "1.12.0",
+  "openmm": "8.3.1",
+  "openmm_platform": "Reference",
+  "ph": 7.4,
+  "hydrogens": "input hydrogens replaced with PDBFixer default pKa assignments",
+  "output_sha256": "30bf1ad085243e9ae0e7a4ce8687b6cb93a158832fba7abc8f0477c88081e85a",
+  "meeko_command": [
+    "-m",
+    "meeko.cli.mk_prepare_receptor",
+    "--read_pdb",
+    "examples/data/receptor.prepared.pdb",
+    "--write_pdbqt",
+    "examples/data/receptor.pdbqt",
+    "--charge_model",
+    "gasteiger"
+  ]
+}

@@ -1,0 +1,32 @@
+# Real Vina score replay; small integration benchmark, not a scientific benchmark.
+schema_version: 1
+seed: 42
+mode: replay
+output_dir: ../results/benchmark_run
+resources:
+  cpu_threads: 2
+  gpu_ids: [0, 1]
+  device: cpu
+  deterministic: true
+data:
+  path: data/docking_scores.csv
+  score_column: docking_score
+  fingerprint_bits: 1024
+model:
+  n_blocks: 2
+  d_block: 64
+  k: 8
+  epochs: 30
+  patience: 8
+  batch_size: 16
+learning:
+  initial_size: 8
+  batch_size: 4
+  cycles: 2
+  budget: 16
+  strategy: lcb
+  beta: 1.0
+evaluation:
+  holdout_fraction: 0.2
+  split: random
+  top_k: 4

@@ -1,0 +1,718 @@
+{
+  "description": "Actual AutoDock Vina energies for a fixed prefix; a computational test fixture, not experimental affinities",
+  "selection": "first N accepted canonical isomeric SMILES, unique structures/identifiers, in input file order; no score-based selection",
+  "requested": 32,
+  "succeeded": 31,
+  "failed": 1,
+  "input_rejections": 0,
+  "seed": 42,
+  "configuration": {
+    "backend": "vina",
+    "receptor": "examples/data/receptor.pdbqt",
+    "center": [
+      -9.595272727272727,
+      27.616606060606063,
+      -35.376878787878795
+    ],
+    "box_size": [
+      22.0,
+      22.0,
+      22.0
+    ],
+    "executable": "qvina2.1",
+    "cpu": 1,
+    "exhaustiveness": 1,
+    "n_poses": 1,
+    "conformers": 1,
+    "timeout": 120.0
+  },
+  "inputs": {
+    "inputs/candidates.csv": "d4df507b6f21893682cb2b14f111c18188e6726283b7d2e0dae4824d8f62a6ab",
+    "examples/data/receptor.pdbqt": "30bf1ad085243e9ae0e7a4ce8687b6cb93a158832fba7abc8f0477c88081e85a",
+    "inputs/reference.pdb": "25ddfc364721506f7066d7c6464d0adf8871617f6ee3d27f17650cc9695b59b7"
+  },
+  "output": "examples/data/docking_scores.csv",
+  "output_sha256": "f8e3015a9a7f5c495cfa1be85e2b64f6d68dae85ce025422621dcec8a9712f6c",
+  "artifacts": "artifacts/reference_docking",
+  "generator_sha256": "460bbf4b33c85ef6825b46ed3b737be59eabac0ed959f641e3807fbd69f83c3a",
+  "oracle_sha256": "e72a8dd0cbc9ecc70b7bd610e6244a938ddb83d6945e570077f09690bf34718d",
+  "command": [
+    "scripts/build_replay.py"
+  ],
+  "versions": {
+    "vina": "1.2.7",
+    "meeko": "0.7.1",
+    "rdkit": "2025.9.6",
+    "numpy": "1.26.4"
+  },
+  "python": "3.10.12",
+  "platform": "Linux-5.15.0-139-generic-x86_64-with-glibc2.31",
+  "cpu_affinity": [
+    2
+  ],
+  "cuda_visible_devices": "",
+  "elapsed_seconds": 277.7203277628869,
+  "records": [
+    {
+      "cid": "Z942299110",
+      "score": -8.999,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z942299110_0ed65fb82a1c0410/best_poses.pdbqt",
+      "seed": 973127929,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.999,
+          "seed": 1785906514,
+          "pose": "artifacts/reference_docking/poses/Z942299110_0ed65fb82a1c0410/poses_000.pdbqt",
+          "pose_sha256": "06b269ea37359ee61ec7187025415cfe1d5879554c99d4c5c0753c7ff151ace7"
+        }
+      ],
+      "pose_sha256": "06b269ea37359ee61ec7187025415cfe1d5879554c99d4c5c0753c7ff151ace7",
+      "smiles": "O=C(c1n[nH]c(=O)c2ccccc12)N1CCC(c2ccccc2)C1",
+      "source_row": 2
+    },
+    {
+      "cid": "Z941397906",
+      "score": -8.261,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z941397906_a9f1b56618720230/best_poses.pdbqt",
+      "seed": 516528323,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.261,
+          "seed": 386082219,
+          "pose": "artifacts/reference_docking/poses/Z941397906_a9f1b56618720230/poses_000.pdbqt",
+          "pose_sha256": "75535ce0170a3ae30361d985a8ea4826f0af6efa1a51249f855c92fe7e0698c5"
+        }
+      ],
+      "pose_sha256": "75535ce0170a3ae30361d985a8ea4826f0af6efa1a51249f855c92fe7e0698c5",
+      "smiles": "Cc1ccc(C(=O)N2CCC(c3ccccc3)C2)cc1F",
+      "source_row": 3
+    },
+    {
+      "cid": "Z1232236895",
+      "score": -8.107,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z1232236895_05c7373786ca1156/best_poses.pdbqt",
+      "seed": 900939113,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.107,
+          "seed": 401536823,
+          "pose": "artifacts/reference_docking/poses/Z1232236895_05c7373786ca1156/poses_000.pdbqt",
+          "pose_sha256": "2ee3f889c48e889873cb06a15852d9f6af5f7b03b9e92107fcef5da2ad3ee3f9"
+        }
+      ],
+      "pose_sha256": "2ee3f889c48e889873cb06a15852d9f6af5f7b03b9e92107fcef5da2ad3ee3f9",
+      "smiles": "Cc1ccc(F)c(C(=O)N2CCC(c3cn[nH]c3)CC2)c1",
+      "source_row": 4
+    },
+    {
+      "cid": "Z1273874165",
+      "score": -8.477,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z1273874165_35aff44a987de97c/best_poses.pdbqt",
+      "seed": 16507730,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.477,
+          "seed": 743595625,
+          "pose": "artifacts/reference_docking/poses/Z1273874165_35aff44a987de97c/poses_000.pdbqt",
+          "pose_sha256": "a6709d2eefdcf85e17b1684a9a8527333c1c1393e899275d101e420096c4c4ab"
+        }
+      ],
+      "pose_sha256": "a6709d2eefdcf85e17b1684a9a8527333c1c1393e899275d101e420096c4c4ab",
+      "smiles": "Cc1cncc(C(=O)N2CCC(c3ccccc3)C2)c1",
+      "source_row": 5
+    },
+    {
+      "cid": "Z1392246229",
+      "score": -8.65,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z1392246229_ee0358ae6fcbebe4/best_poses.pdbqt",
+      "seed": 988060598,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.65,
+          "seed": 12294355,
+          "pose": "artifacts/reference_docking/poses/Z1392246229_ee0358ae6fcbebe4/poses_000.pdbqt",
+          "pose_sha256": "6c58b3220eb35d78105cc2262e255545fcf8f7a0c5dedfa10e49e3aaf9d2b8d5"
+        }
+      ],
+      "pose_sha256": "6c58b3220eb35d78105cc2262e255545fcf8f7a0c5dedfa10e49e3aaf9d2b8d5",
+      "smiles": "O=C(c1n[nH]c(=O)c2ccccc12)N1CCC(c2ccc(F)cc2)C1",
+      "source_row": 6
+    },
+    {
+      "cid": "Z2235802098",
+      "score": -8.58,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z2235802098_8ba0eb1d5bced4ae/best_poses.pdbqt",
+      "seed": 49967872,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.58,
+          "seed": 300470668,
+          "pose": "artifacts/reference_docking/poses/Z2235802098_8ba0eb1d5bced4ae/poses_000.pdbqt",
+          "pose_sha256": "2921dddc3b4e75e06be22e7cfc43a4c5066a8a9dfad8af0ee8554f91678b6972"
+        }
+      ],
+      "pose_sha256": "2921dddc3b4e75e06be22e7cfc43a4c5066a8a9dfad8af0ee8554f91678b6972",
+      "smiles": "COC1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1",
+      "source_row": 7
+    },
+    {
+      "cid": "Z2454233270",
+      "score": -8.046,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z2454233270_4b3468d038f2d316/best_poses.pdbqt",
+      "seed": 646893573,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.046,
+          "seed": 1127815875,
+          "pose": "artifacts/reference_docking/poses/Z2454233270_4b3468d038f2d316/poses_000.pdbqt",
+          "pose_sha256": "9fa6e6d1a2451f71f66676f4facb06d11eb27096ad3e4fae9f8614f083d3f133"
+        }
+      ],
+      "pose_sha256": "9fa6e6d1a2451f71f66676f4facb06d11eb27096ad3e4fae9f8614f083d3f133",
+      "smiles": "Cc1ccc(F)c(C(=O)N2CCC(c3cccnc3)C2)c1",
+      "source_row": 8
+    },
+    {
+      "cid": "Z2651534227",
+      "score": -8.515,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z2651534227_a5cfe8363de8254f/best_poses.pdbqt",
+      "seed": 1883209820,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.515,
+          "seed": 1035228903,
+          "pose": "artifacts/reference_docking/poses/Z2651534227_a5cfe8363de8254f/poses_000.pdbqt",
+          "pose_sha256": "2246b300a766d0aabdd7664469d869f312f5d296c0ab491b9fd6ccb838a12019"
+        }
+      ],
+      "pose_sha256": "2246b300a766d0aabdd7664469d869f312f5d296c0ab491b9fd6ccb838a12019",
+      "smiles": "NC(=O)c1cc(Cc2n[nH]c(=O)c3ccccc23)ccc1F",
+      "source_row": 9
+    },
+    {
+      "cid": "Z2651534246",
+      "score": -9.003,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z2651534246_1545654aca8ae3d8/best_poses.pdbqt",
+      "seed": 1655727721,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.003,
+          "seed": 1540211745,
+          "pose": "artifacts/reference_docking/poses/Z2651534246_1545654aca8ae3d8/poses_000.pdbqt",
+          "pose_sha256": "5c078ce19801a5df9ac6af1ff577682ad0a19163a3f4d3158b9fa073e6043050"
+        }
+      ],
+      "pose_sha256": "5c078ce19801a5df9ac6af1ff577682ad0a19163a3f4d3158b9fa073e6043050",
+      "smiles": "NNC(=O)c1cc(Cc2n[nH]c(=O)c3ccccc23)ccc1F",
+      "source_row": 10
+    },
+    {
+      "cid": "Z3289742859",
+      "score": -9.262,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z3289742859_8745246d11d12616/best_poses.pdbqt",
+      "seed": 107802037,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.262,
+          "seed": 1096468389,
+          "pose": "artifacts/reference_docking/poses/Z3289742859_8745246d11d12616/poses_000.pdbqt",
+          "pose_sha256": "781a8bc8f1a617fb90a109df30658cb38117114e081d3918bcad6f2fb2392ebd"
+        }
+      ],
+      "pose_sha256": "781a8bc8f1a617fb90a109df30658cb38117114e081d3918bcad6f2fb2392ebd",
+      "smiles": "O=C(c1cccc2ccccc12)N1CCC(c2ccc(O)cc2)C1",
+      "source_row": 11
+    },
+    {
+      "cid": "Z4164497076",
+      "score": -7.879,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z4164497076_3eeec2b0cb487bb7/best_poses.pdbqt",
+      "seed": 866330350,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -7.879,
+          "seed": 435135482,
+          "pose": "artifacts/reference_docking/poses/Z4164497076_3eeec2b0cb487bb7/poses_000.pdbqt",
+          "pose_sha256": "0207200bb1d2fbd617f3272063824c54b73f760f72eb8ad28a563f0e6ea31b8c"
+        }
+      ],
+      "pose_sha256": "0207200bb1d2fbd617f3272063824c54b73f760f72eb8ad28a563f0e6ea31b8c",
+      "smiles": "O=C(NCCN(CCO)C(=O)c1cc(Cc2n[nH]c(=O)c3ccccc23)ccc1F)C1CC1",
+      "source_row": 12
+    },
+    {
+      "cid": "Z4631846085",
+      "score": -8.538,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z4631846085_e6df8f56790f7469/best_poses.pdbqt",
+      "seed": 1039286309,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.538,
+          "seed": 918877832,
+          "pose": "artifacts/reference_docking/poses/Z4631846085_e6df8f56790f7469/poses_000.pdbqt",
+          "pose_sha256": "c7b6c341face2b739d3fc22d3f5e0069711a0d008f18632cdf40a89c67e7aaa7"
+        }
+      ],
+      "pose_sha256": "c7b6c341face2b739d3fc22d3f5e0069711a0d008f18632cdf40a89c67e7aaa7",
+      "smiles": "CCc1ccc(C(=O)N2CCC(c3ccccc3)C2)cc1CC",
+      "source_row": 13
+    },
+    {
+      "cid": "Z4631846178",
+      "score": -8.277,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z4631846178_8e979c4ee6a01cc4/best_poses.pdbqt",
+      "seed": 1468519696,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.277,
+          "seed": 1552289184,
+          "pose": "artifacts/reference_docking/poses/Z4631846178_8e979c4ee6a01cc4/poses_000.pdbqt",
+          "pose_sha256": "54483db59b76465027e4bcc6283b3105694185a8e1d3a42f08e0bceb079413cb"
+        }
+      ],
+      "pose_sha256": "54483db59b76465027e4bcc6283b3105694185a8e1d3a42f08e0bceb079413cb",
+      "smiles": "NC(=O)c1ccc(F)c(C(=O)N2CCC(c3ccccc3)C2)c1",
+      "source_row": 14
+    },
+    {
+      "cid": "Z4631846184",
+      "score": -8.74,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z4631846184_ccb2f85086d1a1b4/best_poses.pdbqt",
+      "seed": 776102469,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.74,
+          "seed": 1144013672,
+          "pose": "artifacts/reference_docking/poses/Z4631846184_ccb2f85086d1a1b4/poses_000.pdbqt",
+          "pose_sha256": "50bc3100398290f1b49eb50ba4411c1b206f46fd9647889706628e541ec1b3b8"
+        }
+      ],
+      "pose_sha256": "50bc3100398290f1b49eb50ba4411c1b206f46fd9647889706628e541ec1b3b8",
+      "smiles": "CC1(c2cccc(C(=O)N3CCC(c4ccccc4)C3)c2)CC1",
+      "source_row": 15
+    },
+    {
+      "cid": "Z5007564287",
+      "score": -8.501,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z5007564287_db77da8358ef64e0/best_poses.pdbqt",
+      "seed": 160676812,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.501,
+          "seed": 1465343281,
+          "pose": "artifacts/reference_docking/poses/Z5007564287_db77da8358ef64e0/poses_000.pdbqt",
+          "pose_sha256": "0e4ae6f2c23515913d9de7465c1a892458138a4c1dfec046a1afd4a4e38310ff"
+        }
+      ],
+      "pose_sha256": "0e4ae6f2c23515913d9de7465c1a892458138a4c1dfec046a1afd4a4e38310ff",
+      "smiles": "O=C(c1cccc2c(=O)[nH]ncc12)N1CC(c2ccccc2)C2(CCC2)C1",
+      "source_row": 16
+    },
+    {
+      "cid": "Z5268076910",
+      "score": -7.894,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z5268076910_bac009da6f2d163c/best_poses.pdbqt",
+      "seed": 1448942993,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -7.894,
+          "seed": 1541099952,
+          "pose": "artifacts/reference_docking/poses/Z5268076910_bac009da6f2d163c/poses_000.pdbqt",
+          "pose_sha256": "323fc8df72cd7e472b9f4d104bcedaa3a72259a7e27df38d305d7949f777613e"
+        }
+      ],
+      "pose_sha256": "323fc8df72cd7e472b9f4d104bcedaa3a72259a7e27df38d305d7949f777613e",
+      "smiles": "Cc1ccc(F)c(C(=O)N[C@@H]2C[C@H]2c2ccc(Cl)cc2)c1",
+      "source_row": 17
+    },
+    {
+      "cid": "Z5456236767",
+      "score": -8.999,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z5456236767_ffdff5248b071bf7/best_poses.pdbqt",
+      "seed": 1314402291,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.999,
+          "seed": 1761321067,
+          "pose": "artifacts/reference_docking/poses/Z5456236767_ffdff5248b071bf7/poses_000.pdbqt",
+          "pose_sha256": "1c654ec59bb095eb43107499125aedfc15cb32c7a2618f360ec5a49c63cf18ce"
+        }
+      ],
+      "pose_sha256": "1c654ec59bb095eb43107499125aedfc15cb32c7a2618f360ec5a49c63cf18ce",
+      "smiles": "CN1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1",
+      "source_row": 18
+    },
+    {
+      "cid": "Z5456517807",
+      "score": -9.247,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z5456517807_7b995e0990830a20/best_poses.pdbqt",
+      "seed": 953626488,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.247,
+          "seed": 1689485711,
+          "pose": "artifacts/reference_docking/poses/Z5456517807_7b995e0990830a20/poses_000.pdbqt",
+          "pose_sha256": "08b2bd0068276a7ec61b1d22a210b3df12c9f9596598a93c878923a1ddd61ea1"
+        }
+      ],
+      "pose_sha256": "08b2bd0068276a7ec61b1d22a210b3df12c9f9596598a93c878923a1ddd61ea1",
+      "smiles": "O=C(c1cc(Cc2n[nH]c(=O)c3ccccc23)ccc1F)N1CC[C@@H](F)[C@H](O)C1",
+      "source_row": 19
+    },
+    {
+      "cid": "Z8462127578",
+      "score": null,
+      "status": "failed",
+      "error": "ValueError: disconnected SMILES: supply one explicitly selected ligand chemical state",
+      "pose": null,
+      "seed": 762411304,
+      "smiles": "NC[C@@H]1C[C@H](F)CN1C(=O)c1cc(Cc2n[nH]c(=O)c3ccccc23)ccc1F.O=C(O)C(F)(F)F",
+      "source_row": 20
+    },
+    {
+      "cid": "Z5584403963",
+      "score": -9.619,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z5584403963_ecb0111352314977/best_poses.pdbqt",
+      "seed": 278597949,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.619,
+          "seed": 603860226,
+          "pose": "artifacts/reference_docking/poses/Z5584403963_ecb0111352314977/poses_000.pdbqt",
+          "pose_sha256": "fcb364513f3def7f3749afe8b13df2554ff8d8ff1dd6e27aadf17f4e285e78fa"
+        }
+      ],
+      "pose_sha256": "fcb364513f3def7f3749afe8b13df2554ff8d8ff1dd6e27aadf17f4e285e78fa",
+      "smiles": "O=C(c1cc(Cc2n[nH]c(=O)c3ccccc23)ccc1F)N1CCN(c2ncccn2)CC1",
+      "source_row": 21
+    },
+    {
+      "cid": "Z7224368745",
+      "score": -9.396,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z7224368745_d43ae28c6457e682/best_poses.pdbqt",
+      "seed": 1776588036,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.396,
+          "seed": 1239378003,
+          "pose": "artifacts/reference_docking/poses/Z7224368745_d43ae28c6457e682/poses_000.pdbqt",
+          "pose_sha256": "3d4c623cbfc1d89ab8b33595ea28f00d5238180ee105ab86646bf36205854948"
+        }
+      ],
+      "pose_sha256": "3d4c623cbfc1d89ab8b33595ea28f00d5238180ee105ab86646bf36205854948",
+      "smiles": "CN(C)Cc1ccc(N2CCN(C(=O)c3cc(Cc4n[nH]c(=O)c5ccccc45)ccc3F)CC2)nc1",
+      "source_row": 22
+    },
+    {
+      "cid": "Z8174585712",
+      "score": -9.035,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174585712_1d1f78cbb122a28a/best_poses.pdbqt",
+      "seed": 1378698105,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.035,
+          "seed": 263575995,
+          "pose": "artifacts/reference_docking/poses/Z8174585712_1d1f78cbb122a28a/poses_000.pdbqt",
+          "pose_sha256": "cb68b87f387c085a059622f910174abff17b7d2c9b31b0a8b5381a155957da74"
+        }
+      ],
+      "pose_sha256": "cb68b87f387c085a059622f910174abff17b7d2c9b31b0a8b5381a155957da74",
+      "smiles": "CC(C)S(=O)(=O)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1",
+      "source_row": 23
+    },
+    {
+      "cid": "Z8174586859",
+      "score": -9.498,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174586859_aec19e742ba8d431/best_poses.pdbqt",
+      "seed": 361483592,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.498,
+          "seed": 2106062674,
+          "pose": "artifacts/reference_docking/poses/Z8174586859_aec19e742ba8d431/poses_000.pdbqt",
+          "pose_sha256": "52f33baf8219cad973ae9f1f7c1beb8fb24543443b79e34107c933f973ac147c"
+        }
+      ],
+      "pose_sha256": "52f33baf8219cad973ae9f1f7c1beb8fb24543443b79e34107c933f973ac147c",
+      "smiles": "C[C@@H]1C[C@@]1(C)S(=O)(=O)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1",
+      "source_row": 24
+    },
+    {
+      "cid": "Z8174588583",
+      "score": -8.89,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174588583_683230674a6a0667/best_poses.pdbqt",
+      "seed": 1567801250,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.89,
+          "seed": 331039937,
+          "pose": "artifacts/reference_docking/poses/Z8174588583_683230674a6a0667/poses_000.pdbqt",
+          "pose_sha256": "1b0831c384d65267f6aa00bbd73f175cd8bca05aff04569f1fd3699714086678"
+        }
+      ],
+      "pose_sha256": "1b0831c384d65267f6aa00bbd73f175cd8bca05aff04569f1fd3699714086678",
+      "smiles": "CC(C)CS(=O)(=O)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1",
+      "source_row": 25
+    },
+    {
+      "cid": "Z8174589437",
+      "score": -10.125,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174589437_31f4ffbbc78df324/best_poses.pdbqt",
+      "seed": 528473563,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -10.125,
+          "seed": 1550391683,
+          "pose": "artifacts/reference_docking/poses/Z8174589437_31f4ffbbc78df324/poses_000.pdbqt",
+          "pose_sha256": "ae8991752bccf449c9197183900414df6ca206993a5afbf4415b3c6036f13117"
+        }
+      ],
+      "pose_sha256": "ae8991752bccf449c9197183900414df6ca206993a5afbf4415b3c6036f13117",
+      "smiles": "O=C(c1cc(Cc2n[nH]c(=O)c3ccccc23)ccc1F)N1CCN(S(=O)(=O)C2CCC2)CC1",
+      "source_row": 26
+    },
+    {
+      "cid": "Z8174590424",
+      "score": -10.288,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174590424_e2050ce7b9625e50/best_poses.pdbqt",
+      "seed": 1786214714,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -10.288,
+          "seed": 302732715,
+          "pose": "artifacts/reference_docking/poses/Z8174590424_e2050ce7b9625e50/poses_000.pdbqt",
+          "pose_sha256": "b0c2e3f5fe10cf0194f1bea8551c0315fca665e466af32964b982b3edf785b23"
+        }
+      ],
+      "pose_sha256": "b0c2e3f5fe10cf0194f1bea8551c0315fca665e466af32964b982b3edf785b23",
+      "smiles": "Cc1nocc1NC(=O)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1",
+      "source_row": 27
+    },
+    {
+      "cid": "Z8174592318",
+      "score": -8.608,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174592318_b702871ac05eb80c/best_poses.pdbqt",
+      "seed": 385197463,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -8.608,
+          "seed": 640324849,
+          "pose": "artifacts/reference_docking/poses/Z8174592318_b702871ac05eb80c/poses_000.pdbqt",
+          "pose_sha256": "85599ff80f36e17bff8f77577dd56ed3901b2e65067c16cbcf765c8eed31aa9a"
+        }
+      ],
+      "pose_sha256": "85599ff80f36e17bff8f77577dd56ed3901b2e65067c16cbcf765c8eed31aa9a",
+      "smiles": "CNS(=O)(=O)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1",
+      "source_row": 28
+    },
+    {
+      "cid": "Z8174599508",
+      "score": -9.127,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174599508_3bdc6eab4d833697/best_poses.pdbqt",
+      "seed": 1594129213,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.127,
+          "seed": 248613384,
+          "pose": "artifacts/reference_docking/poses/Z8174599508_3bdc6eab4d833697/poses_000.pdbqt",
+          "pose_sha256": "2d75a7c0a31879d3a3b2831cf0a068963928e2696903ba9d3d704059280e0434"
+        }
+      ],
+      "pose_sha256": "2d75a7c0a31879d3a3b2831cf0a068963928e2696903ba9d3d704059280e0434",
+      "smiles": "O=C(NCC(F)F)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1",
+      "source_row": 29
+    },
+    {
+      "cid": "Z8174603341",
+      "score": -9.923,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174603341_69413496d26785b7/best_poses.pdbqt",
+      "seed": 1301448585,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.923,
+          "seed": 622454194,
+          "pose": "artifacts/reference_docking/poses/Z8174603341_69413496d26785b7/poses_000.pdbqt",
+          "pose_sha256": "d2fae0a35c1e543e4af51d5cf94f21eda9f3d7a3218d9aa173e30d4cd663d306"
+        }
+      ],
+      "pose_sha256": "d2fae0a35c1e543e4af51d5cf94f21eda9f3d7a3218d9aa173e30d4cd663d306",
+      "smiles": "Cn1ccnc1NC(=O)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1",
+      "source_row": 30
+    },
+    {
+      "cid": "Z8174606693",
+      "score": -9.543,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174606693_2f47d9355e440e51/best_poses.pdbqt",
+      "seed": 1917163349,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.543,
+          "seed": 1243562871,
+          "pose": "artifacts/reference_docking/poses/Z8174606693_2f47d9355e440e51/poses_000.pdbqt",
+          "pose_sha256": "6246ba9efbf14a846f721ab58fbec1122e1a8a062dfa42d1dab6e46d85925718"
+        }
+      ],
+      "pose_sha256": "6246ba9efbf14a846f721ab58fbec1122e1a8a062dfa42d1dab6e46d85925718",
+      "smiles": "Cc1noc(C(F)F)c1C(=O)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1",
+      "source_row": 31
+    },
+    {
+      "cid": "Z8174607609",
+      "score": -9.219,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174607609_f42dfb9bd5d866fb/best_poses.pdbqt",
+      "seed": 395292893,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -9.219,
+          "seed": 2125214386,
+          "pose": "artifacts/reference_docking/poses/Z8174607609_f42dfb9bd5d866fb/poses_000.pdbqt",
+          "pose_sha256": "8de0422a59f1f004811f954f04eaa403732cb345c749b1ecb28405029cd15e6b"
+        }
+      ],
+      "pose_sha256": "8de0422a59f1f004811f954f04eaa403732cb345c749b1ecb28405029cd15e6b",
+      "smiles": "O=C(c1cc(Cc2n[nH]c(=O)c3ccccc23)ccc1F)N1CCN(S(=O)(=O)c2nnc[nH]2)CC1",
+      "source_row": 32
+    },
+    {
+      "cid": "Z8174614600",
+      "score": -10.891,
+      "status": "ok",
+      "error": null,
+      "pose": "artifacts/reference_docking/poses/Z8174614600_754a5c8b4e344feb/best_poses.pdbqt",
+      "seed": 2061103283,
+      "best_conformer": 0,
+      "conformers": [
+        {
+          "conformer": 0,
+          "score": -10.891,
+          "seed": 1407692016,
+          "pose": "artifacts/reference_docking/poses/Z8174614600_754a5c8b4e344feb/poses_000.pdbqt",
+          "pose_sha256": "dc015006a991d21bc98ff29fde7e6fb73cac517002b4790e49a4179ac5c184ed"
+        }
+      ],
+      "pose_sha256": "dc015006a991d21bc98ff29fde7e6fb73cac517002b4790e49a4179ac5c184ed",
+      "smiles": "NC(C(=O)N1CCN(C(=O)c2cc(Cc3n[nH]c(=O)c4ccccc34)ccc2F)CC1)c1ccccc1",
+      "source_row": 33
+    }
+  ]
+}

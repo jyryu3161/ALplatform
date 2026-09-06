@@ -1,0 +1,12 @@
+{
+  "formula": "-(0.025*MolWt + 0.4*MolLogP + 0.3*NumHAcceptors - 0.2*NumHDonors)",
+  "generator": "examples/make_demo.py",
+  "intended_use": "Deterministic integration smoke tests only; no scientific performance claims.",
+  "kind": "synthetic_software_test_fixture",
+  "n_compounds": 48,
+  "precision": "8 digits after decimal point",
+  "rdkit_version": "2025.09.6",
+  "score_column": "synthetic_score",
+  "score_units": "arbitrary; not docking energy or measured affinity",
+  "sha256": "1ac8d20a4fe6b0165c606fb68390434babdfb6c00c51bb29007f1fb61fa3a1af"
+}

@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "active-learning-docking"
+version = "2.0.0"
+description = "Reproducible pool-based molecular docking with official TabM ensembles"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+  "numpy>=1.24,<3", "pandas>=2,<3", "scipy>=1.10,<2",
+  "scikit-learn>=1.3,<2", "torch>=2.2,<3", "tabm==0.0.3",
+  "rdkit>=2023.9", "PyYAML>=6,<7", "threadpoolctl>=3,<4",
+]
+
+[project.optional-dependencies]
+docking = ["vina==1.2.7", "meeko==0.7.1", "gemmi>=0.6,<1"]
+prepare = ["pdbfixer==1.12.0", "openmm>=8.2,<9", "meeko==0.7.1", "gemmi>=0.6,<1"]
+tuning = ["optuna>=4,<5"]
+dev = ["pytest>=8,<10", "ruff>=0.12,<1", "build>=1,<2"]
+
+[project.urls]
+Repository = "https://github.com/jyryu3161/Active_learning_docking"
+Issues = "https://github.com/jyryu3161/Active_learning_docking/issues"
+
+[project.scripts]
+active-learning-docking = "active_learning_docking.cli:main"
+
+[tool.setuptools]
+packages = ["active_learning_docking"]
+py-modules = ["main", "unified_model", "Activedocking"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: real external docking integration", "gpu: requires GPU 0 or 1"]
+
+[tool.ruff]
+line-length = 110
+include = ["active_learning_docking/**/*.py", "tests/test_*.py", "scripts/*.py", "main.py", "unified_model.py", "Activedocking.py"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

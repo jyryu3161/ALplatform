@@ -1,0 +1,39 @@
+schema_version: 1
+seed: 42
+mode: docking
+output_dir: ../results/docking
+resources:
+  cpu_threads: 2
+  gpu_ids: [0, 1]
+  device: cpu
+  deterministic: true
+data:
+  path: ../inputs/candidates.csv
+  fingerprint_bits: 256
+  invalid_policy: error
+model:
+  n_blocks: 2
+  d_block: 32
+  k: 4
+  epochs: 8
+  patience: 3
+  batch_size: 16
+learning:
+  initial_size: 4
+  batch_size: 2
+  cycles: 1
+  budget: 6
+  strategy: lcb
+evaluation:
+  holdout_fraction: 0.0
+  top_k: 4
+docking:
+  backend: vina
+  receptor: data/receptor.pdbqt
+  reference_ligand: ../inputs/reference.pdb
+  box_size: [22.0, 22.0, 22.0]
+  exhaustiveness: 1
+  n_poses: 1
+  conformers: 1
+  timeout: 180.0
+  cpu: 1

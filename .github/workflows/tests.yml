@@ -1,0 +1,28 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  cpu:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.10', '3.12']
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      CUDA_VISIBLE_DEVICES: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '${{ matrix.python }}'
+      - run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: python -m pip install '.[docking,tuning,dev]'
+      - run: ruff check .
+      - run: python -m pytest -q -m 'not integration and not gpu'
+      - run: active-learning-docking reproduce --config examples/replay.yaml --output artifacts/ci_reproduce
+      - run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verification-${{ matrix.python }}
+          path: artifacts/ci_reproduce
