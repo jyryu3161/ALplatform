@@ -23,8 +23,8 @@ tuning = ["optuna>=4,<5"]
 dev = ["pytest>=8,<10", "ruff>=0.12,<1", "build>=1,<2"]
 
 [project.urls]
-Repository = "https://github.com/jyryu3161/Active_learning_docking"
-Issues = "https://github.com/jyryu3161/Active_learning_docking/issues"
+Repository = "https://github.com/jyryu3161/ALplatform"
+Issues = "https://github.com/jyryu3161/ALplatform/issues"
 
 [project.scripts]
 active-learning-docking = "active_learning_docking.cli:main"

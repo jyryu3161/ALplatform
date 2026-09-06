@@ -8,4 +8,4 @@ authors:
     given-names: "Jae Yong"
     email: "jyryu@ssu.ac.kr"
 abstract: "Configuration-driven, reproducible active learning using official TabM ensembles and Vina or QVina docking."
-repository-code: "https://github.com/jyryu3161/Active_learning_docking"
+repository-code: "https://github.com/jyryu3161/ALplatform"
