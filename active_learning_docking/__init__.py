@@ -1,4 +1,4 @@
-"""Reproducible active learning with the official TabM implementation.
+"""Reproducible active learning with local regression models and ensembles.
 
 Heavy numerical libraries are deliberately imported only after resource setup.
 """

@@ -89,7 +89,7 @@ def select_indices(
     else:
         if not isinstance(rng, np.random.Generator):
             raise ValueError("random and thompson strategies require an explicit numpy Generator")
-        order = np.argsort(tie_key, kind="stable")
+        order = tie_key if ids is None else np.argsort(tie_key, kind="stable")
         values = np.empty_like(mean)
         if strategy == "random":
             values[order] = rng.random(len(mean))
@@ -97,4 +97,19 @@ def select_indices(
             values[order] = rng.normal(mean[order], beta * std[order])
     if not np.isfinite(values).all():
         raise ValueError("acquisition values overflowed; check beta and input score scales")
-    return np.lexsort((tie_key, values))[: min(n, len(mean))].astype(np.int64)
+    count = min(n, len(mean))
+    if count * 4 >= len(mean):
+        return np.lexsort((tie_key, values))[:count].astype(np.int64)
+    # AL normally selects a tiny fraction of a large pool. Partition by value
+    # in linear time, then resolve the boundary ties explicitly: argpartition
+    # alone could discard the lexically preferred compound among equal scores.
+    boundary_value = np.partition(values, count - 1)[count - 1]
+    better = np.flatnonzero(values < boundary_value)
+    boundary = np.flatnonzero(values == boundary_value)
+    needed = count - len(better)
+    if ids is not None:
+        boundary = boundary[np.argsort(tie_key[boundary], kind="stable")[:needed]]
+    else:
+        boundary = boundary[:needed]
+    selected = np.concatenate((better, boundary))
+    return selected[np.lexsort((tie_key[selected], values[selected]))].astype(np.int64)

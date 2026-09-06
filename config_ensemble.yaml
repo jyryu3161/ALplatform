@@ -1,0 +1,37 @@
+# Runnable CPU example: all selected models are installed by the core package.
+# Run: active-learning-docking run --config config_ensemble.yaml
+schema_version: 1
+seed: 42
+mode: replay
+output_dir: results/ensemble
+resources:
+  cpu_threads: 2
+  device: cpu
+data:
+  path: examples/replay.csv
+  score_column: synthetic_score
+  fingerprint_bits: 256
+model:
+  models: [tabm, random_forest, extra_trees]
+  ensemble:
+    strategy: validation
+  params:
+    random_forest: {n_estimators: 128, min_samples_leaf: 2}
+    extra_trees: {n_estimators: 128, min_samples_leaf: 2}
+  n_blocks: 2
+  d_block: 32
+  k: 4
+  epochs: 12
+  patience: 4
+  batch_size: 16
+  inference_batch_size: 128
+  validation_fraction: 0.2
+learning:
+  initial_size: 8
+  batch_size: 4
+  cycles: 3
+  budget: 20
+  strategy: lcb
+evaluation:
+  holdout_fraction: 0.2
+  top_k: 4

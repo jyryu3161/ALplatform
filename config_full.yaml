@@ -22,6 +22,11 @@ data:
   fingerprint_radius: 2
   fingerprint_bits: 2048
 model:
+  models: [tabm]
+  ensemble:
+    strategy: mean  # mean | weighted | validation (inverse acquired-validation MSE)
+    weights: null  # weighted only, in models order; e.g. [0.5, 0.3, 0.2]
+  params: {}  # Per-model options, e.g. {nori: {model: nori-6m, max_features: 128}}
   n_blocks: 3
   d_block: 128
   k: 16

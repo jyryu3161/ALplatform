@@ -9,6 +9,8 @@ import math
 
 import yaml
 
+from .model_registry import canonical_model_name
+
 
 @dataclass
 class ResourceConfig:
@@ -32,7 +34,16 @@ class DataConfig:
 
 
 @dataclass
+class EnsembleConfig:
+    strategy: str = "mean"
+    weights: list[float] | None = None
+
+
+@dataclass
 class ModelConfig:
+    models: list[str] = field(default_factory=lambda: ["tabm"])
+    ensemble: EnsembleConfig = field(default_factory=EnsembleConfig)
+    params: dict[str, dict[str, Any]] = field(default_factory=dict)
     n_blocks: int = 3
     d_block: int = 128
     k: int = 16
@@ -47,6 +58,38 @@ class ModelConfig:
     tuning_method: str = "random"
     n_trials: int = 10
     inference_batch_size: int | None = None
+
+    def validate_selection(self) -> None:
+        if not self.models:
+            raise ValueError("model.models must contain at least one model")
+        names = [canonical_model_name(name) for name in self.models]
+        if len(names) != len(set(names)):
+            raise ValueError("model.models must not contain duplicate models or aliases")
+        parameters = {}
+        for name, params in self.params.items():
+            canonical = canonical_model_name(name)
+            if canonical in parameters:
+                raise ValueError("model.params contains duplicate model aliases")
+            if canonical not in names:
+                raise ValueError(f"model.params.{name} is not selected in model.models")
+            forbidden = set(params) & {"device", "seed", "random_state", "n_jobs", "cpu_threads"}
+            if forbidden:
+                raise ValueError(f"Set resource/seed controls at experiment level, not model.params.{name}: "
+                                 f"{sorted(forbidden)}")
+            parameters[canonical] = params
+        strategy, weights = self.ensemble.strategy, self.ensemble.weights
+        if strategy not in {"mean", "weighted", "validation"}:
+            raise ValueError("model.ensemble.strategy must be mean, weighted or validation")
+        if strategy == "weighted":
+            if (weights is None or len(weights) != len(names) or
+                    any(type(w) not in {int, float} or not math.isfinite(w) or w < 0 for w in weights) or
+                    max(weights) <= 0):
+                raise ValueError("weighted ensemble requires one nonnegative weight per model, with positive sum")
+        elif weights is not None:
+            raise ValueError("model.ensemble.weights is only valid with strategy: weighted")
+        if self.auto_tune and "tabm" not in names:
+            raise ValueError("model.auto_tune requires tabm in model.models")
+        self.models, self.params = names, parameters
 
 
 @dataclass
@@ -105,6 +148,7 @@ class ExperimentConfig:
     def validate(self) -> ExperimentConfig:
         """Reject contradictory or unsafe experiments before importing numerical code."""
         _construct(ExperimentConfig, self.to_dict())
+        self.model.validate_selection()
         if self.schema_version != 1:
             raise ValueError("schema_version must be 1")
         if not 0 <= self.seed < 2**31 - 1:
@@ -229,7 +273,27 @@ def _check_type(value: Any, annotation: Any, key: str) -> None:
             except ValueError:
                 pass
         raise ValueError(f"invalid type for {key}")
-    if origin is list:
+    if annotation is Any:
+        if value is None or type(value) in {str, bool, int}:
+            return
+        if type(value) is float and math.isfinite(value):
+            return
+        if isinstance(value, list):
+            for item in value:
+                _check_type(item, Any, key)
+            return
+        if isinstance(value, dict) and all(isinstance(k, str) for k in value):
+            for item in value.values():
+                _check_type(item, Any, key)
+            return
+        raise ValueError(f"{key} must contain finite JSON-compatible values")
+    if origin is dict:
+        if not isinstance(value, dict):
+            raise ValueError(f"{key} must be a mapping")
+        for name, item in value.items():
+            _check_type(name, args[0], key)
+            _check_type(item, args[1], f"{key}.{name}")
+    elif origin is list:
         if not isinstance(value, list):
             raise ValueError(f"{key} must be a list")
         for item in value:
@@ -262,6 +326,12 @@ def _construct(cls: type, mapping: Any, prefix: str = "") -> Any:
 
 def from_dict(mapping: dict[str, Any], base_dir: str | Path | None = None) -> ExperimentConfig:
     """Build and validate a config; resolve input/output paths against base_dir."""
+    if isinstance(mapping, dict) and "models" in mapping:
+        mapping = dict(mapping)
+        model = mapping.get("model", {})
+        if not isinstance(model, dict) or "models" in model:
+            raise ValueError("Use either root models or model.models, not both")
+        mapping["model"] = dict(model, models=mapping.pop("models"))
     config = _construct(ExperimentConfig, mapping).validate()
     base = Path(base_dir or Path.cwd()).resolve()
     for obj, names in [(config, ["output_dir"]), (config.data, ["path"]),
@@ -270,6 +340,12 @@ def from_dict(mapping: dict[str, Any], base_dir: str | Path | None = None) -> Ex
             value = getattr(obj, name)
             if value:
                 setattr(obj, name, str((base / Path(value).expanduser()).resolve()))
+    for params in config.model.params.values():
+        for name in ("model_path", "checkpoint_path", "disk_offload_dir"):
+            if params.get(name):
+                if not isinstance(params[name], str):
+                    raise ValueError(f"model.params paths ({name}) must be strings")
+                params[name] = str((base / Path(params[name]).expanduser()).resolve())
     return config
 
 

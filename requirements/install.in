@@ -1,0 +1,16 @@
+# Installer profiles target Linux x86_64 (glibc >= 2.28), Python 3.11.13.
+# Recompile the matching lock with uv 0.11.7 using its generated command header.
+# Existing lock pins preserve the tested stack; use --upgrade only for a reviewed update.
+-e .[docking,prepare,tuning,dev,nori,tabldm,tabfm]
+
+# A single PyTorch release supports both tested accelerator profiles.
+torch==2.8.0
+openmm==8.3.1
+gemmi==0.6.5
+optuna==4.0.0
+
+# Seed these and their dependencies from the selected lock before building with
+# --no-build-isolation. Nori requires setuptools < 81; TabLDM uses Hatchling.
+setuptools>=77,<81
+wheel==0.48.0
+hatchling==1.32.0

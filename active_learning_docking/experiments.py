@@ -13,7 +13,7 @@ from typing import Any, Sequence
 
 import yaml
 
-from .provenance import artifact_hashes, sha256_file, write_json
+from .provenance import artifact_hashes, write_json
 
 
 def _new_output(path: str | Path) -> Path:
@@ -48,15 +48,15 @@ def compare_runs(first: str | Path, second: str | Path) -> dict[str, Any]:
     may be absent from both (no holdout, or ``save_predictions: false``).
     """
     first, second = Path(first).resolve(), Path(second).resolve()
+    inventories = []
     for directory in (first, second):
         manifest = json.loads((directory / "manifest.json").read_text())
         if manifest["status"] != "completed":
             raise ValueError(f"run is not completed: {directory}")
-        if artifact_hashes(directory) != manifest["artifact_sha256"]:
+        inventory = artifact_hashes(directory)
+        if inventory != manifest["artifact_sha256"]:
             raise ValueError(f"artifact integrity mismatch (inventory or content): {directory}")
-        for name, expected in manifest["artifact_sha256"].items():
-            if sha256_file(directory / name) != expected:
-                raise ValueError(f"artifact integrity mismatch: {directory / name}")
+        inventories.append(inventory)
     canonical_names = ["observations.csv", "final_results.csv", "predictions.csv", "split.csv",
                        "metrics.csv", "training_history.csv", "summary.json"]
     cycle_names = {
@@ -89,8 +89,10 @@ def compare_runs(first: str | Path, second: str | Path) -> dict[str, Any]:
             comparisons[name] = left == right
         else:
             comparisons[name] = a.read_bytes() == b.read_bytes()
-    left_poses = {str(p.relative_to(first)): sha256_file(p) for p in first.rglob("*.pdbqt")}
-    right_poses = {str(p.relative_to(second)): sha256_file(p) for p in second.rglob("*.pdbqt")}
+    # The verified inventories already contain byte hashes for every pose.
+    # Reuse them rather than rereading potentially large checkpoint/pose files.
+    left_poses, right_poses = [{name: digest for name, digest in inventory.items() if name.endswith(".pdbqt")}
+                              for inventory in inventories]
     comparisons["all_pose_bytes"] = left_poses == right_poses
     return {"passed": all(comparisons.values()), "comparison": "exact", "checks": comparisons}
 

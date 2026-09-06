@@ -12,6 +12,7 @@ data:
   score_column: synthetic_score
   fingerprint_bits: 256
 model:
+  models: [tabm]  # tabm (tamb alias), random_forest, extra_trees, nori, tabldm, tabfm
   n_blocks: 2
   d_block: 32
   k: 4

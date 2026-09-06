@@ -121,3 +121,54 @@ def test_directly_mutated_dataclasses_receive_same_strict_validation(section, na
     setattr(getattr(config, section), name, value)
     with pytest.raises(ValueError):
         config.validate()
+
+
+def test_model_selection_aliases_and_legacy_default():
+    assert from_dict({"data": {"path": "x.csv"}}).model.models == ["tabm"]
+    config = from_dict({"data": {"path": "x.csv"}, "models": ["tamb", "rf", "et"],
+                        "model": {"params": {"rf": {"n_estimators": 8}},
+                                  "ensemble": {"strategy": "weighted", "weights": [2, 1, 1]}}})
+    assert config.model.models == ["tabm", "random_forest", "extra_trees"]
+    assert config.model.params == {"random_forest": {"n_estimators": 8}}
+    assert "models" not in config.to_dict()  # resolved schema has one canonical location
+    with pytest.raises(ValueError, match="not both"):
+        from_dict({"data": {"path": "x.csv"}, "models": ["tabm"], "model": {"models": ["tabm"]}})
+
+
+@pytest.mark.parametrize("model", [
+    {"models": []}, {"models": "tabm"}, {"models": ["tamb", "tabm"]}, {"models": ["typo"]},
+    {"models": [True]}, {"models": ["random_forest"], "auto_tune": True},
+    {"params": {"nori": {"model": "nori-6m"}}},
+    {"params": {"tabm": {"seed": 20}}}, {"params": {"tabm": {"device": "cuda:2"}}},
+    {"params": {"tabm": {"dropout": float("nan")}}}, {"params": {"tabm": []}},
+    {"ensemble": {"strategy": "unknown"}}, {"ensemble": {"weights": [1]}},
+    {"ensemble": {"strategy": "weighted"}},
+    {"ensemble": {"strategy": "weighted", "weights": [0]}},
+    {"ensemble": {"strategy": "weighted", "weights": [-1]}},
+    {"ensemble": {"strategy": "weighted", "weights": [1, 2]}},
+    {"ensemble": {"strategy": "weighted", "weights": [float("inf")]}},
+    {"ensemble": {"strategy": "weighted", "weights": [True]}},
+])
+def test_invalid_model_selection_and_ensemble_fail_validation(model):
+    with pytest.raises(ValueError):
+        from_dict({"data": {"path": "x.csv"}, "model": model})
+
+
+def test_optional_checkpoint_paths_and_model_overrides_resolve(tmp_path):
+    path = tmp_path / "models.yaml"
+    path.write_text("data:\n  path: x.csv\n")
+    config = load_config(path, ["model.models=[nori,tabfm]", "model.params.nori.model_path=weights/nori.pt",
+                                "model.params.tabfm.checkpoint_path=weights/tabfm",
+                                "model.params.nori.max_features=null"])
+    assert config.model.params["nori"]["model_path"] == str(tmp_path / "weights/nori.pt")
+    assert config.model.params["tabfm"]["checkpoint_path"] == str(tmp_path / "weights/tabfm")
+    assert config.model.params["nori"]["max_features"] is None
+
+
+def test_cli_lists_models_without_config_or_optional_imports(capsys):
+    import json
+
+    assert main(["models"]) == 0
+    catalog = json.loads(capsys.readouterr().out)
+    assert {"tabm", "random_forest", "extra_trees", "nori", "tabldm", "tabfm"} == set(catalog["models"])
+    assert catalog["aliases"]["tamb"] == "tabm"

@@ -17,8 +17,9 @@ STRATEGIES = ("random", "greedy", "lcb", "thompson")
 
 def build_parser() -> argparse.ArgumentParser:
     """Return the ``run``/``validate``/``reproduce``/``benchmark``/``prepare-library`` parser."""
-    parser = argparse.ArgumentParser(description="Reproducible active learning with official TabM")
+    parser = argparse.ArgumentParser(description="Reproducible active learning with local regression ensembles")
     commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("models", help="List supported local models and optional installation commands")
     for name in ("run", "validate", "reproduce", "benchmark", "prepare-library"):
         command = commands.add_parser(name)
         command.add_argument("--config", required=True, type=Path)
@@ -42,6 +43,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.insert(0, "run")
     options = build_parser().parse_args(args)
     try:
+        if options.command == "models":
+            from .model_registry import ALIASES, MODEL_CATALOG
+
+            print(json.dumps({"models": MODEL_CATALOG, "aliases": ALIASES}, indent=2))
+            return 0
         config = load_config(options.config, options.set)
         if options.command == "validate":
             print(json.dumps(config.to_dict(), indent=2))

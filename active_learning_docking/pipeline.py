@@ -11,7 +11,6 @@ an in-memory CSV library.
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict
 import logging
 from pathlib import Path
 from typing import Any, Mapping, Protocol
@@ -97,6 +96,15 @@ class ActiveLearningExperiment:
 
     def run(self) -> dict[str, Any]:
         """Execute all stages and return the experiment summary."""
+        from .regressors import create_regressor
+
+        # Fail on unavailable backends/invalid parameters before spending docking budget.
+        preflight = create_regressor(self.config.model, seed=self.config.seed,
+                                     device=self.runtime["device"],
+                                     cpu_threads=self.config.resources.cpu_threads)
+        if hasattr(preflight, "preflight"):
+            preflight.preflight()
+        del preflight
         self.prepare_library()
         self.oracle = self.make_oracle()
         seeds = np.random.SeedSequence(self.config.seed).spawn(2)
@@ -247,21 +255,39 @@ class ActiveLearningExperiment:
 
     def fit_model(self, cycle: int, cycle_dir: Path) -> Any:
         """Fit a fresh seeded model on all successful acquired labels."""
-        from .model import TabMRegressor
+        from .regressors import create_regressor
 
         successful = [row for row in self.observations if row["status"] == "ok"]
         if len(successful) < 3:
             raise RuntimeError(f"only {len(successful)} successful observations; at least 3 required for training")
         self.train_indices = np.array([row["library_index"] for row in successful], dtype=np.int64)
         self.train_scores = np.array([row["score"] for row in successful], dtype=np.float64)
-        model = TabMRegressor(**asdict(self.config.model), seed=self.config.seed + cycle,
-                              device=self.runtime["device"])
+        # Drop the previous cycle's GPU model/cache before allocating the new fit.
+        self.model = None
+        model = create_regressor(self.config.model, seed=self.config.seed + cycle,
+                                 device=self.runtime["device"],
+                                 cpu_threads=self.config.resources.cpu_threads)
         model.fit(self.features.take(self.train_indices), self.train_scores,
                   groups=self.library.smiles(self.train_indices))
         model.save(cycle_dir / "model")
-        internal = pd.DataFrame({"compound_id": self.library.ids(self.train_indices), "partition": "train"})
+        internal = pd.DataFrame({"compound_id": self.library.ids(self.train_indices), "partition": "unused"})
+        internal.loc[model.train_indices_, "partition"] = "train"
         internal.loc[model.validation_indices_, "partition"] = "validation"
         internal.to_csv(cycle_dir / "training_split.csv", index=False)
+        if hasattr(model, "members_"):
+            partitions = []
+            for name, member in model.members_.items():
+                partition = internal.copy()
+                partition["model"], partition["partition"] = name, "unused"
+                partition.loc[member.train_indices_, "partition"] = "train"
+                partition.loc[member.validation_indices_, "partition"] = "validation"
+                partitions.append(partition)
+            pd.concat(partitions, ignore_index=True).to_csv(cycle_dir / "member_training_splits.csv", index=False)
+        if len(getattr(model, "weight_validation_indices_", [])):
+            weighting = internal.copy()
+            weighting["partition"] = "weight_train"
+            weighting.loc[model.weight_validation_indices_, "partition"] = "weight_validation"
+            weighting.to_csv(cycle_dir / "ensemble_validation_split.csv", index=False)
         self.history.extend({"cycle": cycle, **epoch} for epoch in model.history_)
         return model
 
@@ -274,6 +300,11 @@ class ActiveLearningExperiment:
             "internal_validation_mse_standardized": self.model.best_validation_loss_,
             "acquisition_beta": beta,
         }
+        if hasattr(self.model, "weights_"):
+            for name, weight in zip(self.config.model.models, self.model.weights_):
+                metrics[f"ensemble_weight_{name}"] = float(weight)
+            for name, mse in self.model.validation_mse_.items():
+                metrics[f"ensemble_validation_mse_{name}"] = mse
         if len(self.holdout):
             heldout_scores = self.library.scores(self.holdout)
             heldout_mean, heldout_std = self.model.predict(self.features.take(self.holdout))
@@ -311,6 +342,7 @@ class ActiveLearningExperiment:
         learning = self.config.learning
         summary = {
             "mode": self.config.mode, "seed": self.config.seed, "strategy": learning.strategy,
+            "models": self.config.model.models,
             "pool_size": len(self.pool), "holdout_size": len(self.holdout), "rejected_rows": self.n_rejected,
             "budget": learning.budget, "attempted": len(self.observations), "successful": len(final),
             "cycles_completed": len(self.cycle_metrics) - 1,

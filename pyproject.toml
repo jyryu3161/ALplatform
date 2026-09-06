@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "active-learning-docking"
 version = "2.0.0"
-description = "Reproducible pool-based molecular docking with official TabM ensembles"
+description = "Reproducible pool-based molecular docking with local regression ensembles"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -21,6 +21,9 @@ docking = ["vina==1.2.7", "meeko==0.7.1", "gemmi>=0.6,<1"]
 prepare = ["pdbfixer==1.12.0", "openmm>=8.2,<9", "meeko==0.7.1", "gemmi>=0.6,<1"]
 tuning = ["optuna>=4,<5"]
 dev = ["pytest>=8,<10", "ruff>=0.12,<1", "build>=1,<2"]
+nori = ["synthefy-nori==0.20.1"]
+tabldm = ["Xiaomi-TabLDM @ git+https://github.com/xiaomi-research/xiaomi-tabldm@b8ec5c87b66434d941f701795584d86853fd7f29"]
+tabfm = ["tabfm[pytorch]==1.0.1", "scikit-learn>=1.6,<2", "safetensors>=0.4.3,<1"]
 
 [project.urls]
 Repository = "https://github.com/jyryu3161/ALplatform"
@@ -35,7 +38,8 @@ py-modules = ["main", "unified_model", "Activedocking"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["integration: real external docking integration", "gpu: requires GPU 0 or 1"]
+markers = ["integration: real external docking integration", "gpu: requires GPU 0 or 1",
+           "foundation: opt-in real pretrained model integration"]
 
 [tool.ruff]
 line-length = 110

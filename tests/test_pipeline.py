@@ -17,6 +17,30 @@ from active_learning_docking.provenance import sha256_file
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_optional_model_preflight_failure_spends_no_docking_budget(monkeypatch, tmp_path):
+    import logging
+
+    from active_learning_docking.config import from_dict
+    from active_learning_docking.foundation import FoundationRegressor
+    from active_learning_docking.pipeline import ActiveLearningExperiment
+
+    config = from_dict({"data": {"path": "unused.csv"}, "model": {"models": ["nori"]}})
+    experiment = ActiveLearningExperiment(config, {"device": "cpu"}, tmp_path, logging.getLogger(__name__))
+
+    def unavailable(self):
+        raise ImportError("optional runtime unavailable")
+
+    def should_not_start(*args):
+        pytest.fail("The pool/oracle must not be used when model preflight fails")
+
+    monkeypatch.setattr(FoundationRegressor, "preflight", unavailable)
+    monkeypatch.setattr(experiment, "prepare_library", should_not_start)
+    monkeypatch.setattr(experiment, "make_oracle", should_not_start)
+    with pytest.raises(ImportError, match="optional runtime unavailable"):
+        experiment.run()
+    assert experiment.observations == []
+
+
 def tiny_mapping(output, data_path=None):
     return {
         "seed": 19,

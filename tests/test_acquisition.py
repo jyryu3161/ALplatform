@@ -50,6 +50,38 @@ def test_empty_and_exhausted_pool():
     assert select_indices([-2, -3], [0, 0], 100).tolist() == [1, 0]
 
 
+@pytest.mark.parametrize("strategy", ["greedy", "lcb", "random", "thompson"])
+@pytest.mark.parametrize("count", [1, 7, 29, 30, 119, 500])
+@pytest.mark.parametrize("with_ids", [False, True])
+def test_partial_pool_selection_matches_complete_sort(strategy, count, with_ids):
+    """Small-batch optimization preserves scores, tie order and stochastic draws."""
+    source = np.random.default_rng(99)
+    mean = source.integers(-8, -3, size=120).astype(float)
+    std = source.integers(0, 3, size=120).astype(float)
+    ids = np.array([f"compound_{index:03}" for index in source.permutation(len(mean))]) if with_ids else None
+    tie_key = np.arange(len(mean)) if ids is None else ids
+    draw_order = np.argsort(tie_key, kind="stable")
+    random = np.random.default_rng(10)
+    if strategy == "greedy":
+        values = mean
+    elif strategy == "lcb":
+        values = mean - 2 * std
+    else:
+        values = np.empty_like(mean)
+        values[draw_order] = random.random(len(mean)) if strategy == "random" else random.normal(
+            mean[draw_order], 2 * std[draw_order])
+    expected = np.lexsort((tie_key, values))[:count]
+    actual = select_indices(mean, std, count, strategy, beta=2, ids=ids, rng=np.random.default_rng(10))
+    np.testing.assert_array_equal(actual, expected)
+
+
+@pytest.mark.parametrize("with_ids", [False, True])
+def test_partial_selection_handles_a_boundary_tied_across_the_entire_pool(with_ids):
+    ids = np.array([f"compound_{index:03}" for index in range(100, 0, -1)]) if with_ids else None
+    expected = [99, 98, 97] if with_ids else [0, 1, 2]
+    assert select_indices(np.full(100, -5.0), np.zeros(100), 3, ids=ids).tolist() == expected
+
+
 @pytest.mark.parametrize("mean,std,kwargs", [
     ([float("nan")], [0], {}), ([1], [-1], {}), ([1], [float("inf")], {}),
     ([1], [1, 2], {}), ([[1]], [[0]], {}), ([1], [0], {"beta": -1}),
@@ -82,4 +114,3 @@ def test_scheduled_beta_endpoints_paths_and_validation():
         scheduled_beta(4, 3, 1.0, 0.0, "linear")
     with pytest.raises(ValueError, match="schedule"):
         scheduled_beta(1, 3, 1.0, 0.0, "cosine")
-
