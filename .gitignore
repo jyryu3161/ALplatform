@@ -298,3 +298,6 @@ artifacts/
 !examples/data/*.pdbqt
 !examples/data/*.json
 !examples/data/receptor.preparation.log
+
+# Local task workspace
+.dryforge/
