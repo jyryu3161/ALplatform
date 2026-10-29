@@ -31,7 +31,7 @@ active-learning-docking run --config examples/replay.yaml   # output_dir이 새 
 |---|---|
 | (없음) | CPU PyTorch 2.8.0, import 확인, TabM+RF+ET 소형 replay(성공 12개, 유한 예측 48개 확인) |
 | `--test` | 위 + 실제 도킹 테스트를 켠 전체 테스트 |
-| `--test-models` | `--test` + Nori·TabLDM·TabFM 공개 가중치 실제 추론(첫 실행 약 7.2 GB 다운로드) |
+| `--test-models` | `--test` + Nori·TabLDM·TabFM·TabPFN v2 공개 가중치 실제 추론·복원과 TabPFN replay 정확 재현(첫 실행 시 가중치 다운로드, TabPFN v2는 약 44 MB) |
 | `--torch-backend cu128` | CUDA 12.8 PyTorch(약 3.7 GiB 추가), 사용 가능한 물리 GPU 0 또는 1 필요 |
 | `--venv PATH` | 다른 환경 경로(새 경로이거나 이 체크아웃 소유 환경) |
 | `--offline` | 캐시된 uv·Python·패키지(·가중치)만 사용 |
@@ -43,7 +43,7 @@ source .venv-ald-cu128/bin/activate
 active-learning-docking run --config examples/gpu.yaml
 ```
 
-검증 결과는 `<환경>/installation-checks/<타임스탬프-접미사>/report.json`(+ `runtime.log`, replay 로그·결과, 요청 시 `pytest.log`·`pytest.xml`)에 남는다. `--test`는 실제 Vina/QVina 통합 테스트가, `--test-models`는 거기에 더해 foundation 실제 테스트 3개가 skip되거나 실패하면 설치 검증 전체를 실패로 처리한다.
+검증 결과는 `<환경>/installation-checks/<타임스탬프-접미사>/report.json`(+ `runtime.log`, replay 로그·결과, 요청 시 `pytest.log`·`pytest.xml`)에 남는다. `--test`는 실제 Vina/QVina 통합 테스트가, `--test-models`는 거기에 더해 foundation 실제 테스트 5개(Nori·TabLDM·TabFM·TabPFN 추론·복원, TabPFN replay 정확 재현)가 skip되거나 실패하면 설치 검증 전체를 실패로 처리한다.
 
 `setup_server.sh`는 `install.sh`로 인자를 그대로 넘긴다. `source activate_env.sh [PATH]`는 지정 환경, 없으면 `.venv-ald`, 그것도 없으면 예전 `.venv`를 활성화한다.
 
@@ -60,6 +60,10 @@ CUDA_VISIBLE_DEVICES=0,1 taskset -c 0,1 .venv-ald/bin/python -m pytest -q
 ```bash
 # 실제 Vina/QVina 통합 테스트 (도킹 관련 변경 시 권장)
 ALD_RUN_DOCKING_TESTS=1 .venv-ald/bin/python -m pytest -q tests/test_docking.py -m integration
+
+# 실제 GNINA 재채점 통합 테스트 (재채점 관련 변경 시; GNINA 1.3.3 SIF와 Apptainer 필요)
+ALD_RUN_DOCKING_TESTS=1 ALD_GNINA_IMAGE=<gnina-1.3.3.sif> ALD_APPTAINER=<apptainer 실행 파일> \
+  .venv-ald/bin/python -m pytest -q tests/test_docking.py tests/test_pipeline.py -m integration
 
 # 실제 foundation 가중치 테스트 (누락 가중치 다운로드)
 ALD_RUN_FOUNDATION_TESTS=1 .venv-ald/bin/python -m pytest -q tests/test_foundation.py -m foundation
@@ -94,8 +98,8 @@ python -m active_learning_docking run --config CONFIG.yaml      # 같은 동작
 | `examples/replay.yaml` | 48개 합성 점수 replay, 가장 빠른 동작 확인 |
 | `config_basic.yaml` | 최소 합성 replay |
 | `config_full.yaml` | 전체 스키마 |
-| `config_ensemble.yaml` | TabM + RF + ET, 검증 가중치 |
-| `examples/foundation.yaml` | TabM + Nori + TabLDM + TabFM (선택 런타임 필요) |
+| `config_ensemble.yaml` | TabPFN + RF + ET, 검증 가중치 |
+| `examples/foundation.yaml` | TabPFN + Nori + TabLDM + TabFM (Nori·TabLDM·TabFM 런타임 필요) |
 | `config_autotune.yaml` | TabM 시드 하이퍼파라미터 탐색 |
 | `examples/docking.yaml` | 실제 Vina 도킹 (빠른 실행용 설정) |
 | `examples/gpu.yaml` | 물리 GPU 선택 |
@@ -136,6 +140,7 @@ python scripts/build_replay.py --output artifacts/replay_repeat/docking_scores.c
 |---|---|---|
 | `ALD_RUN_DOCKING_TESTS=1` | 실제 Vina/QVina 통합 테스트 활성화 | 테스트 실행 시에만 |
 | `ALD_RUN_FOUNDATION_TESTS=1` | 실제 foundation 가중치 테스트 활성화(다운로드 발생) | 테스트 실행 시에만 |
+| `ALD_GNINA_IMAGE`, `ALD_APPTAINER` | 실제 GNINA 재채점 통합 테스트용 SIF·Apptainer 경로. 없으면 그 테스트는 skip | 테스트 실행 시에만 |
 | `CUDA_VISIBLE_DEVICES` | 상속되면 허용 GPU와 교집합. 숫자가 아닌 값이면 GPU 실행 불가 | 실행 전 셸 |
 | `XDG_CACHE_HOME` | uv 캐시 위치 | 설치 시 |
 | `OMP/MKL/OPENBLAS/NUMEXPR_NUM_THREADS` | 테스트 시 1로 지정. 실험 실행 시에는 `configure_resources`가 `cpu_threads`로 덮어씀 | 테스트 셸 |

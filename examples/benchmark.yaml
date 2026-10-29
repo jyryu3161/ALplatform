@@ -13,11 +13,6 @@ data:
   score_column: docking_score
   fingerprint_bits: 1024
 model:
-  n_blocks: 2
-  d_block: 64
-  k: 8
-  epochs: 30
-  patience: 8
   batch_size: 16
 learning:
   initial_size: 8

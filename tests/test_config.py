@@ -57,7 +57,8 @@ def test_invalid_overrides_rejected(tmp_path, override):
     ("resources", {"gpu_ids": [0], "device": "cuda:1"}),
     ("learning", {"initial_size": 20, "budget": 10}), ("learning", {"initial_size": 2}),
     ("evaluation", {"split": "not-a-split"}), ("evaluation", {"holdout_fraction": 0.5}),
-    ("model", {"k": 1}), ("docking", {"center": [0, 0]}), ("docking", {"box_size": [1, 0, 1]}),
+    ("model", {"models": ["tabm"], "k": 1}), ("docking", {"center": [0, 0]}),
+    ("docking", {"box_size": [1, 0, 1]}),
     ("docking", {"workers": 0}), ("docking", {"workers": 5, "cpu": 2}), ("data", {"fingerprint_type": "maccs"}),
     ("learning", {"beta_schedule": "cosine", "beta_final": 0.0}), ("learning", {"beta_final": 0.5}),
     ("learning", {"beta_schedule": "linear"}), ("learning", {"beta_schedule": "exponential", "beta_final": 0.0}),
@@ -124,7 +125,7 @@ def test_directly_mutated_dataclasses_receive_same_strict_validation(section, na
 
 
 def test_model_selection_aliases_and_legacy_default():
-    assert from_dict({"data": {"path": "x.csv"}}).model.models == ["tabm"]
+    assert from_dict({"data": {"path": "x.csv"}}).model.models == ["tabpfn"]
     config = from_dict({"data": {"path": "x.csv"}, "models": ["tamb", "rf", "et"],
                         "model": {"params": {"rf": {"n_estimators": 8}},
                                   "ensemble": {"strategy": "weighted", "weights": [2, 1, 1]}}})
@@ -139,8 +140,10 @@ def test_model_selection_aliases_and_legacy_default():
     {"models": []}, {"models": "tabm"}, {"models": ["tamb", "tabm"]}, {"models": ["typo"]},
     {"models": [True]}, {"models": ["random_forest"], "auto_tune": True},
     {"params": {"nori": {"model": "nori-6m"}}},
-    {"params": {"tabm": {"seed": 20}}}, {"params": {"tabm": {"device": "cuda:2"}}},
-    {"params": {"tabm": {"dropout": float("nan")}}}, {"params": {"tabm": []}},
+    {"models": ["tabm"], "params": {"tabm": {"seed": 20}}},
+    {"models": ["tabm"], "params": {"tabm": {"device": "cuda:2"}}},
+    {"models": ["tabm"], "params": {"tabm": {"dropout": float("nan")}}},
+    {"models": ["tabm"], "params": {"tabm": []}},
     {"ensemble": {"strategy": "unknown"}}, {"ensemble": {"weights": [1]}},
     {"ensemble": {"strategy": "weighted"}},
     {"ensemble": {"strategy": "weighted", "weights": [0]}},
@@ -170,5 +173,144 @@ def test_cli_lists_models_without_config_or_optional_imports(capsys):
 
     assert main(["models"]) == 0
     catalog = json.loads(capsys.readouterr().out)
-    assert {"tabm", "random_forest", "extra_trees", "nori", "tabldm", "tabfm"} == set(catalog["models"])
+    assert {"tabm", "random_forest", "extra_trees", "nori", "tabldm", "tabfm",
+            "tabpfn"} == set(catalog["models"])
     assert catalog["aliases"]["tamb"] == "tabm"
+
+
+def _docking_mapping(**docking):
+    """A valid docking-mode mapping with extra ``docking`` keys."""
+    return {"data": {"path": "a.csv"}, "mode": "docking", "evaluation": {"holdout_fraction": 0},
+            "docking": {"receptor": "receptor.pdbqt", "center": [0, 0, 0], **docking}}
+
+
+GNINA_PATHS = {"gnina_image": "gnina.sif", "apptainer_executable": "bin/apptainer"}
+
+
+def test_rescoring_defaults_to_none_with_null_paths():
+    config = from_dict(_docking_mapping())
+    assert (config.docking.rescoring, config.docking.gnina_image, config.docking.apptainer_executable) == (
+        "none", None, None)
+    docking = config.to_dict()["docking"]
+    assert list(docking)[-3:] == ["rescoring", "gnina_image", "apptainer_executable"]
+
+
+@pytest.mark.parametrize("mapping", [
+    {**_docking_mapping(rescoring="gnina", **GNINA_PATHS), "mode": "replay", "evaluation": {}},
+    _docking_mapping(rescoring="gnina", apptainer_executable="bin/apptainer"),
+    _docking_mapping(rescoring="gnina", gnina_image="gnina.sif"),
+    _docking_mapping(rescoring="none", gnina_image="gnina.sif"),
+    _docking_mapping(apptainer_executable="bin/apptainer"),
+    _docking_mapping(rescoring="vina", **GNINA_PATHS),
+    _docking_mapping(rescoring="GNINA", **GNINA_PATHS),
+    _docking_mapping(rescoring=None, **GNINA_PATHS),
+    _docking_mapping(rescoring="gnina", gnina_image=3, apptainer_executable="bin/apptainer"),
+    {**_docking_mapping(rescoring="gnina", **GNINA_PATHS), "output_dir": "/tmp/run:1"},
+    {**_docking_mapping(rescoring="gnina", **GNINA_PATHS), "output_dir": "/tmp/run,1"},
+])
+def test_invalid_rescoring_configuration_rejected(mapping):
+    with pytest.raises(ValueError):
+        from_dict(mapping)
+
+
+def test_rescoring_paths_resolve_against_config_directory(tmp_path, monkeypatch):
+    path = tmp_path / "config.yaml"
+    path.write_text("data:\n  path: a.csv\nmode: docking\nevaluation:\n  holdout_fraction: 0\n"
+                    "docking:\n  receptor: r.pdbqt\n  center: [0, 0, 0]\n  rescoring: gnina\n"
+                    "  gnina_image: images/gnina.sif\n  apptainer_executable: bin/apptainer\n")
+    monkeypatch.chdir(tmp_path.parent)
+    config = load_config(path)
+    assert config.docking.rescoring == "gnina"
+    assert config.docking.gnina_image == str(tmp_path / "images/gnina.sif")
+    assert config.docking.apptainer_executable == str(tmp_path / "bin/apptainer")
+    overridden = load_config(path, ["docking.gnina_image=other.sif"])
+    assert overridden.docking.gnina_image == str(tmp_path / "other.sif")
+
+
+TABM_ONLY_VALUES = {
+    "n_blocks": 2, "d_block": 64, "k": 4, "dropout": 0.2, "learning_rate": 0.01, "weight_decay": 0.0,
+    "epochs": 12, "patience": 4, "tuning_method": "grid", "n_trials": 3,
+}
+
+
+@pytest.mark.parametrize("models", [None, ["tabpfn"], ["random_forest", "extra_trees"], ["nori"]])
+@pytest.mark.parametrize("name,value", sorted(TABM_ONLY_VALUES.items()))
+def test_tabm_only_value_without_tabm_is_rejected(models, name, value):
+    model = {name: value} if models is None else {"models": models, name: value}
+    with pytest.raises(ValueError, match=rf"model\.{name}=.* applies only to TabM"):
+        from_dict({"data": {"path": "x.csv"}, "model": model})
+
+
+@pytest.mark.parametrize("models", [["tabm"], ["random_forest", "tabm"]])
+def test_tabm_only_values_are_accepted_when_tabm_is_selected(models):
+    config = from_dict({"data": {"path": "x.csv"}, "model": {"models": models, **TABM_ONLY_VALUES}})
+    assert all(getattr(config.model, name) == value for name, value in TABM_ONLY_VALUES.items())
+
+
+def test_tabm_only_defaults_and_shared_values_are_accepted_without_tabm():
+    defaults = {"n_blocks": 3, "d_block": 128, "k": 16, "dropout": 0.1, "learning_rate": 0.001,
+                "weight_decay": 0.0003, "epochs": 100, "patience": 10, "tuning_method": "random",
+                "n_trials": 10}
+    shared = {"batch_size": 16, "validation_fraction": 0.3, "inference_batch_size": 64}
+    config = from_dict({"data": {"path": "x.csv"}, "model": {**defaults, **shared}})
+    assert config.model.models == ["tabpfn"]
+    assert (config.model.batch_size, config.model.validation_fraction, config.model.inference_batch_size) == (
+        16, 0.3, 64)
+
+
+def _budget_mapping(models, device, budget):
+    return {"data": {"path": "x.csv"}, "model": {"models": models},
+            "resources": {"device": device}, "learning": {"budget": budget}}
+
+
+@pytest.mark.parametrize("models", [["tabpfn"], ["random_forest", "tabpfn"]])
+def test_tabpfn_on_cpu_rejects_budget_above_1000(models):
+    with pytest.raises(ValueError, match="cuda:0 or cuda:1"):
+        from_dict(_budget_mapping(models, "cpu", 1001))
+
+
+@pytest.mark.parametrize("models,device,budget", [
+    (["tabpfn"], "cpu", 1000), (["random_forest", "tabpfn"], "cpu", 1000),
+    (["tabpfn"], "cuda:0", 1001), (["random_forest", "tabpfn"], "cuda:1", 100000),
+    (["random_forest"], "cpu", 1001), (["tabm"], "cpu", 1001),
+])
+def test_tabpfn_budget_rule_allows_small_cpu_budgets_gpus_and_other_models(models, device, budget):
+    assert from_dict(_budget_mapping(models, device, budget)).learning.budget == budget
+
+
+BUNDLED_MODELS = {
+    "config_basic.yaml": ["tabpfn"],
+    "config_ensemble.yaml": ["tabpfn", "random_forest", "extra_trees"],
+    "config_autotune.yaml": ["tabm"],
+    "config_full.yaml": ["tabpfn"],
+    "examples/replay.yaml": ["tabpfn"],
+    "examples/docking.yaml": ["tabpfn"],
+    "examples/benchmark.yaml": ["tabpfn"],
+    "examples/foundation.yaml": ["tabpfn", "nori", "tabldm", "tabfm"],
+    "examples/gpu.yaml": ["tabpfn"],
+}
+
+
+def test_bundled_model_table_lists_every_bundled_config():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    found = {str(path.relative_to(root)) for pattern in ("config_*.yaml", "examples/*.yaml")
+             for path in root.glob(pattern)}
+    assert found == set(BUNDLED_MODELS)
+
+
+@pytest.mark.parametrize("name,models", sorted(BUNDLED_MODELS.items()))
+def test_every_bundled_config_validates_with_expected_models(name, models, capsys):
+    import json
+    from pathlib import Path
+
+    import yaml
+
+    path = Path(__file__).resolve().parents[1] / name
+    assert main(["validate", "--config", str(path)]) == 0
+    resolved = json.loads(capsys.readouterr().out)
+    assert resolved["model"]["models"] == models
+    if "tabm" not in models and name != "config_full.yaml":  # config_full lists every key at its default
+        written = yaml.safe_load(path.read_text())["model"]
+        assert not set(written) & set(TABM_ONLY_VALUES), f"{name} keeps TabM-only fields"

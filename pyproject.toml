@@ -14,6 +14,8 @@ dependencies = [
   "numpy>=1.24,<3", "pandas>=2,<3", "scipy>=1.10,<2",
   "scikit-learn>=1.3,<2", "torch>=2.2,<3", "tabm==0.0.3",
   "rdkit>=2023.9", "PyYAML>=6,<7", "threadpoolctl>=3,<4",
+  # Default regression model: TabPFN v2 regression checkpoint, loaded from a pinned local file.
+  "tabpfn==9.2.0",
 ]
 
 [project.optional-dependencies]

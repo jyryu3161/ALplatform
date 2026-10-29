@@ -12,6 +12,10 @@ MODEL_CATALOG = {
                "access": "public pretrained weights; local inference; no API key"},
     "tabfm": {"implementation": "tabfm.TabFMRegressor", "install": "pip install -e '.[tabfm]'",
               "access": "Python >=3.11; public weights for non-commercial, non-production use"},
+    "tabpfn": {"implementation": "tabpfn.TabPFNRegressor (TabPFN v2 regression checkpoint)",
+               "install": "pip install -e .",
+               "access": ("public weights (Prior Labs License: Apache 2.0 + attribution); "
+                          "local inference; no API key")},
 }
 
 ALIASES = {"tamb": "tabm", "rf": "random_forest", "et": "extra_trees"}

@@ -20,7 +20,7 @@ def small_config(output):
         "seed": 42, "output_dir": str(output),
         "resources": {"cpu_threads": 1, "device": "cpu"},
         "data": {"path": str(ROOT / "examples/replay.csv"), "score_column": "synthetic_score", "fingerprint_bits": 128},
-        "model": {"n_blocks": 1, "d_block": 16, "k": 4, "epochs": 1, "batch_size": 8},
+        "model": {"models": ["tabm"], "n_blocks": 1, "d_block": 16, "k": 4, "epochs": 1, "batch_size": 8},
         "learning": {"initial_size": 6, "batch_size": 3, "cycles": 1, "budget": 9},
         "evaluation": {"holdout_fraction": 0.2, "top_k": 3},
     })
@@ -125,6 +125,47 @@ def test_csv_headers_and_all_fields_are_part_of_comparison(repeated_runs, tmp_pa
     report = compare_runs(*copies)
     assert not report["passed"]
     assert not report["checks"]["cycle_000/header_check.csv"]
+
+
+@pytest.mark.parametrize("left,right,passed", [
+    ("$$$$\n", "$$$$\n", True),
+    ("> <minimizedAffinity>\n-7.1\n$$$$\n", "> <minimizedAffinity>\n-7.2\n$$$$\n", False),
+])
+def test_sdf_pose_bytes_are_compared(repeated_runs, tmp_path, left, right, passed):
+    root, _ = repeated_runs
+    copies = []
+    for index, contents in enumerate((left, right)):
+        directory = tmp_path / str(index)
+        shutil.copytree(root / "repeat_a", directory)
+        pose = directory / "cycle_000/poses/z1_0123456789abcdef"
+        pose.mkdir(parents=True)
+        (pose / "gnina_scored.sdf").write_text(contents)
+        manifest_path = directory / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["artifact_sha256"] = artifact_hashes(directory)
+        manifest_path.write_text(json.dumps(manifest))
+        copies.append(directory)
+    for first, second in (copies, copies[::-1]):
+        report = compare_runs(first, second)
+        assert report["passed"] is passed
+        assert report["checks"]["all_pose_bytes"] is passed
+
+
+def test_sdf_pose_present_in_only_one_run_fails(repeated_runs, tmp_path):
+    root, _ = repeated_runs
+    altered = tmp_path / "altered"
+    shutil.copytree(root / "repeat_a", altered)
+    pose = altered / "cycle_000/poses/z1_0123456789abcdef"
+    pose.mkdir(parents=True)
+    (pose / "rescore_pose.sdf").write_text("$$$$\n")
+    manifest_path = altered / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["artifact_sha256"] = artifact_hashes(altered)
+    manifest_path.write_text(json.dumps(manifest))
+    report = compare_runs(root / "repeat_a", altered)
+    assert not report["passed"]
+    assert report["checks"] == {**compare_runs(root / "repeat_a", root / "repeat_b")["checks"],
+                                "all_pose_bytes": False}
 
 
 def test_incomplete_archive_is_not_reproducible(repeated_runs, tmp_path):

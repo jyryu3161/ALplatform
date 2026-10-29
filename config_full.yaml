@@ -22,11 +22,16 @@ data:
   fingerprint_radius: 2
   fingerprint_bits: 2048
 model:
-  models: [tabm]
+  models: [tabpfn]  # default; tabm, random_forest, extra_trees, nori, tabldm, tabfm, or a list (ensemble)
   ensemble:
     strategy: mean  # mean | weighted | validation (inverse acquired-validation MSE)
     weights: null  # weighted only, in models order; e.g. [0.5, 0.3, 0.2]
-  params: {}  # Per-model options, e.g. {nori: {model: nori-6m, max_features: 128}}
+  params:  # Per-model options for selected models only, e.g. nori: {model: nori-6m, max_features: 128}
+    # tabpfn model_path: a local tabpfn-v2-regressor.ckpt; null downloads the pinned public checkpoint.
+    tabpfn: {max_features: 500, max_context_samples: 10000, n_estimators: 8, model_path: null}
+  # TabM only: n_blocks, d_block, k, dropout, learning_rate, weight_decay, epochs, patience, auto_tune,
+  # tuning_method, n_trials. Values other than these defaults require tabm in models.
+  # batch_size, validation_fraction and inference_batch_size are shared by all models.
   n_blocks: 3
   d_block: 128
   k: 16
@@ -71,3 +76,6 @@ docking:
   timeout: 300.0
   cpu: 1
   workers: 1
+  rescoring: none  # none | gnina (GNINA CNNaffinity rescoring of each best pose; mode: docking only)
+  gnina_image: null  # gnina only: GNINA Apptainer SIF image path; must be null with rescoring: none
+  apptainer_executable: null  # gnina only: Apptainer executable path (PATH is not searched)

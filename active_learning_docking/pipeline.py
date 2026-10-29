@@ -79,14 +79,17 @@ class ActiveLearningExperiment:
     compound, including a failed docking, consumes one budget unit, and
     holdout labels never enter fitting, tuning, stopping or acquisition.
     Libraries are ID-sorted, so positions serve as deterministic tie keys.
+    ``manifest`` is the run manifest already written to ``output``; oracle
+    provenance checked at oracle creation (GNINA rescoring) is added to it there.
     """
 
     def __init__(self, config: ExperimentConfig, runtime: Mapping[str, Any], output: Path,
-                 logger: logging.Logger) -> None:
+                 logger: logging.Logger, manifest: dict[str, Any] | None = None) -> None:
         self.config = config
         self.runtime = runtime
         self.output = output
         self.logger = logger
+        self.manifest = manifest
         self.observations: list[dict[str, Any]] = []
         self.cycle_metrics: list[dict[str, Any]] = []
         self.history: list[dict[str, Any]] = []
@@ -107,6 +110,11 @@ class ActiveLearningExperiment:
         del preflight
         self.prepare_library()
         self.oracle = self.make_oracle()
+        rescoring = getattr(self.oracle, "rescoring", None)
+        if rescoring is not None and self.manifest is not None:
+            # Record the GNINA image/version check as soon as it passes, before any budget is spent.
+            self.manifest["rescoring"] = rescoring
+            write_json(self.output / "manifest.json", self.manifest)
         seeds = np.random.SeedSequence(self.config.seed).spawn(2)
         self.initial_rng, self.acquisition_rng = [np.random.default_rng(seed) for seed in seeds]
         learning = self.config.learning
@@ -237,6 +245,10 @@ class ActiveLearningExperiment:
                 "prediction_before_query": before[index][0] if cycle else None,
                 "uncertainty_before_query": before[index][1] if cycle else None,
             }
+            if self.config.docking.rescoring == "gnina":
+                # Extra columns exist only for rescored runs; failed attempts leave all three blank.
+                for name in ("docking_energy", "cnn_score", "cnn_affinity"):
+                    observation[name] = result.get(name) if result["status"] == "ok" else None
             self.observations.append(observation)
             cycle_observations.append(observation)
             self.queried[index] = True
@@ -373,7 +385,7 @@ def run_experiment(config: ExperimentConfig, runtime: Mapping[str, Any] | None =
     write_json(output / "manifest.json", manifest)
     logger, handlers = _open_logger(output, str(id(config)))
     try:
-        summary = ActiveLearningExperiment(config, runtime, output, logger).run()
+        summary = ActiveLearningExperiment(config, runtime, output, logger, manifest).run()
         manifest.update(status="completed", completed_at=utc_now(), summary=summary,
                         artifact_sha256=artifact_hashes(output))
         write_json(output / "manifest.json", manifest)

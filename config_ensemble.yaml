@@ -12,17 +12,12 @@ data:
   score_column: synthetic_score
   fingerprint_bits: 256
 model:
-  models: [tabm, random_forest, extra_trees]
+  models: [tabpfn, random_forest, extra_trees]
   ensemble:
     strategy: validation
   params:
     random_forest: {n_estimators: 128, min_samples_leaf: 2}
     extra_trees: {n_estimators: 128, min_samples_leaf: 2}
-  n_blocks: 2
-  d_block: 32
-  k: 4
-  epochs: 12
-  patience: 4
   batch_size: 16
   inference_batch_size: 128
   validation_fraction: 0.2

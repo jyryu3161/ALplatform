@@ -169,7 +169,7 @@ def _make_member(name: str, config: ModelConfig, seed: int, device: str, cpu_thr
 
 
 def create_regressor(config: ModelConfig, *, seed: int = 42, device: str = "cpu", cpu_threads: int = 1) -> Any:
-    """Construct only explicitly selected models; the legacy default is TabM."""
+    """Construct only the selected models; ``ModelConfig`` defaults to TabPFN v2 (``["tabpfn"]``)."""
     config.validate_selection()
     if len(config.models) == 1:
         return _make_member(config.models[0], config, seed, device, cpu_threads)

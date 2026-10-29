@@ -39,9 +39,15 @@ class EnsembleConfig:
     weights: list[float] | None = None
 
 
+# Fields read only by TabM. batch_size, validation_fraction and
+# inference_batch_size are shared with other backends and the ensemble.
+TABM_ONLY_FIELDS = ("n_blocks", "d_block", "k", "dropout", "learning_rate", "weight_decay", "epochs",
+                    "patience", "tuning_method", "n_trials")
+
+
 @dataclass
 class ModelConfig:
-    models: list[str] = field(default_factory=lambda: ["tabm"])
+    models: list[str] = field(default_factory=lambda: ["tabpfn"])
     ensemble: EnsembleConfig = field(default_factory=EnsembleConfig)
     params: dict[str, dict[str, Any]] = field(default_factory=dict)
     n_blocks: int = 3
@@ -89,6 +95,13 @@ class ModelConfig:
             raise ValueError("model.ensemble.weights is only valid with strategy: weighted")
         if self.auto_tune and "tabm" not in names:
             raise ValueError("model.auto_tune requires tabm in model.models")
+        if "tabm" not in names:
+            # Stops an old TabM YAML from running silently on another model.
+            for name in TABM_ONLY_FIELDS:
+                value = getattr(self, name)
+                if value != ModelConfig.__dataclass_fields__[name].default:
+                    raise ValueError(f"model.{name}={value!r} applies only to TabM, which is not in "
+                                     f"model.models {names}; remove it or add tabm to model.models")
         self.models, self.params = names, parameters
 
 
@@ -126,6 +139,9 @@ class DockingConfig:
     timeout: float = 300.0
     cpu: int = 1
     workers: int = 1
+    rescoring: str = "none"
+    gnina_image: str | None = None
+    apptainer_executable: str | None = None
 
 
 @dataclass
@@ -166,6 +182,9 @@ class ExperimentConfig:
             raise ValueError("resources.device must be cpu, cuda:0 or cuda:1 (physical GPU)")
         if self.resources.device != "cpu" and int(self.resources.device[-1]) not in ids:
             raise ValueError("requested device must be in resources.gpu_ids")
+        if "tabpfn" in self.model.models and self.resources.device == "cpu" and self.learning.budget > 1000:
+            raise ValueError("tabpfn on resources.device: cpu is limited to learning.budget <= 1000; "
+                             "use resources.device: cuda:0 or cuda:1 (physical GPU) for larger budgets")
         for section, names in [
             (self.data, ["fingerprint_bits"]),
             (self.model, ["n_blocks", "d_block", "k", "epochs", "batch_size", "patience", "n_trials"]),
@@ -226,6 +245,21 @@ class ExperimentConfig:
             raise ValueError("docking.workers × docking.cpu cannot exceed resources.cpu_threads")
         if self.docking.timeout <= 0:
             raise ValueError("docking.timeout must be positive")
+        if self.docking.rescoring not in {"none", "gnina"}:
+            raise ValueError("docking.rescoring must be none or gnina")
+        rescoring_paths = (self.docking.gnina_image, self.docking.apptainer_executable)
+        if self.docking.rescoring == "gnina":
+            if self.mode != "docking":
+                raise ValueError("docking.rescoring: gnina requires mode: docking")
+            if not all(rescoring_paths):
+                raise ValueError("docking.rescoring: gnina requires docking.gnina_image and "
+                                 "docking.apptainer_executable")
+            # Compound directories are bound into Apptainer; fail before any docking budget is spent.
+            if any(character in str(self.output_dir) for character in ":,"):
+                raise ValueError("docking.rescoring: gnina requires an output_dir without ':' or ','")
+        elif any(value is not None for value in rescoring_paths):
+            raise ValueError("docking.gnina_image and docking.apptainer_executable must be null "
+                             "unless docking.rescoring is gnina")
         for name in ("box_size", "center"):
             values = getattr(self.docking, name)
             if values is not None and (len(values) != 3 or (name == "box_size" and min(values) <= 0)):
@@ -335,7 +369,8 @@ def from_dict(mapping: dict[str, Any], base_dir: str | Path | None = None) -> Ex
     config = _construct(ExperimentConfig, mapping).validate()
     base = Path(base_dir or Path.cwd()).resolve()
     for obj, names in [(config, ["output_dir"]), (config.data, ["path"]),
-                       (config.docking, ["receptor", "reference_ligand", "executable"])]:
+                       (config.docking, ["receptor", "reference_ligand", "executable", "gnina_image",
+                                         "apptainer_executable"])]:
         for name in names:
             value = getattr(obj, name)
             if value:

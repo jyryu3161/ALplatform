@@ -16,7 +16,7 @@ usage() {
   cat <<'EOF'
 Usage: bash install.sh [options]
 
-Install all six models, docking, receptor preparation, tuning and test tools.
+Install all seven models, docking, receptor preparation, tuning and test tools.
 Requires Linux x86_64 with glibc >=2.28. CPU is the default.
 
   --venv PATH                 Environment directory (default: repo/.venv-ald)
@@ -27,7 +27,8 @@ Requires Linux x86_64 with glibc >=2.28. CPU is the default.
   -h, --help                  Show this help
 
 Every installation checks native imports and runs a small three-model replay.
---test-models downloads about 7.2 GB of public weights on first use.
+--test-models downloads about 7.2 GB of public weights on first use
+(Nori, TabLDM, TabFM and the 44 MB TabPFN v2 regression checkpoint).
 EOF
 }
 

@@ -18,9 +18,11 @@ from tests.test_pipeline import ROOT, run_cli, tiny_mapping
 
 
 def small_model(models, strategy="mean", weights=None):
+    # TabM-only values are rejected unless TabM is selected.
+    tabm = dict(n_blocks=1, d_block=8, k=4, epochs=2) if {"tabm", "tamb"} & set(models) else {}
     return ModelConfig(
         models=models, ensemble=EnsembleConfig(strategy=strategy, weights=weights),
-        n_blocks=1, d_block=8, k=4, epochs=2, batch_size=8, inference_batch_size=7,
+        batch_size=8, inference_batch_size=7, **tabm,
         params={name: {"n_estimators": 5, "max_depth": 3}
                 for name in models if name in {"random_forest", "extra_trees", "rf", "et"}},
     )

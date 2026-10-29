@@ -8,6 +8,8 @@ torch==2.8.0
 openmm==8.3.1
 gemmi==0.6.5
 optuna==4.0.0
+# Default regression model (TabPFN v2 regression checkpoint); core dependency.
+tabpfn==9.2.0
 
 # Seed these and their dependencies from the selected lock before building with
 # --no-build-isolation. Nori requires setuptools < 81; TabLDM uses Hatchling.

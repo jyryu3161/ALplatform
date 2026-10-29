@@ -2,7 +2,7 @@
 
 ## 프로젝트 개요
 
-도킹 예산이 제한된 상황에서 화합물 풀 일부를 도킹(또는 기록된 점수로 replay)하고, 획득한 점수로 회귀 모델(TabM, 랜덤 포레스트, 엑스트라 트리, Nori, TabLDM, Google TabFM 또는 그 앙상블)을 학습해 다음 질의를 고르는 연구실 내부 연구용 Python 패키지(`active_learning_docking`, 약 4천 줄)다. 사용자는 연구실 구성원이며, 공유 연구 서버에서 CLI로 실행한다. 10^8개 규모 라이브러리, 허용 오차 없는 재현, 과학적 기록의 정직성이 설계의 중심이다. 서버·데이터베이스·웹 인터페이스는 없다.
+도킹 예산이 제한된 상황에서 화합물 풀 일부를 도킹(선택적으로 GNINA CNNaffinity 재채점, 또는 기록된 점수로 replay)하고, 획득한 점수로 회귀 모델(기본 TabPFN v2, TabM, 랜덤 포레스트, 엑스트라 트리, Nori, TabLDM, Google TabFM 또는 그 앙상블)을 학습해 다음 질의를 고르는 연구실 내부 연구용 Python 패키지(`active_learning_docking`, 약 4천 줄)다. 사용자는 연구실 구성원이며, 공유 연구 서버에서 CLI로 실행한다. 10^8개 규모 라이브러리, 허용 오차 없는 재현, 과학적 기록의 정직성이 설계의 중심이다. 서버·데이터베이스·웹 인터페이스는 없다.
 
 ## 프로젝트 구조
 
@@ -22,7 +22,7 @@ project-root/
 │   ├── contracts.md                 → CLI·YAML·Python API·산출물·체크포인트 계약
 │   └── tracking/
 │       ├── status.md                → 완료/남은 작업/범위 밖
-│       ├── decisions/index.md       → 결정 기록 목록 (0001–0008)
+│       ├── decisions/index.md       → 결정 기록 목록 (0001–0010)
 │       └── findings.md              → 지금 풀 수 없는 문제
 ├── active_learning_docking/
 │   └── AGENTS.md                    → 패키지 모듈별 소유 범위, 불변 조건, 테스트 지침
@@ -48,9 +48,9 @@ project-root/
 - **학습·선택·평가·분할 코드를 고칠 때** → `docs/business-rules.md`의 "학습 데이터 규칙", "선택 규칙", "평가 지표". 홀드아웃 라벨을 바꿔도 질의·학습 기록·예측이 그대로인지 확인하는 테스트가 있는지 본다.
 - **리팩터링·성능 개선 전** → 변경 전 커밋에서 번들 설정 실행 결과를 먼저 만들어 둔다. 절차는 `docs/engineering-notes.md`의 "재현성".
 - **import 위치나 자원 설정을 건드릴 때** → `docs/architecture.md`의 "import 순서가 구조의 일부다", `docs/engineering-notes.md`의 "자원 설정".
-- **회귀 백엔드 추가·수정** → `docs/standards.md`의 "모듈 경계와 import", `docs/engineering-notes.md`의 "새 회귀 백엔드 추가" 체크리스트, `docs/tracking/decisions/0008-ensemble-weighting.md`.
+- **회귀 백엔드 추가·수정** → `docs/standards.md`의 "모듈 경계와 import", `docs/engineering-notes.md`의 "새 회귀 백엔드 추가" 체크리스트, `docs/tracking/decisions/0008-ensemble-weighting.md`. TabPFN 백엔드를 고칠 때는 `docs/tracking/decisions/0010-tabpfn-v2-default.md`도 본다.
 - **설정 키 추가·변경** → `docs/contracts.md`의 설정 표, `docs/standards.md`의 "설정 스키마".
-- **도킹 코드** → `docs/tracking/decisions/0007-isolated-docking-workers.md`, `docs/engineering-notes.md`의 "도킹".
+- **도킹 코드** → `docs/tracking/decisions/0007-isolated-docking-workers.md`, `docs/engineering-notes.md`의 "도킹". GNINA 재채점을 고칠 때는 `docs/tracking/decisions/0009-gnina-cnnaffinity-rescoring.md`와 `docs/engineering-notes.md`의 "GNINA 업그레이드" 체크리스트도 본다.
 - **대용량 저장소 코드** → `docs/tracking/decisions/0004-library-store.md`, `docs/engineering-notes.md`의 "대용량 라이브러리"(측정 기준값).
 - **의존성 변경** → `docs/standards.md`의 "의존성", `docs/tracking/decisions/0005-uv-locked-installer.md`.
 - **사용법(명령·설정·출력·설치)이 바뀌는 변경** → 같은 커밋에서 영어 사용자 문서(`README.md`, `docs/reference.md`, `docs/model_backends.md`)를 갱신한다.

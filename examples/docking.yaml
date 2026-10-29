@@ -12,11 +12,6 @@ data:
   fingerprint_bits: 256
   invalid_policy: error
 model:
-  n_blocks: 2
-  d_block: 32
-  k: 4
-  epochs: 8
-  patience: 3
   batch_size: 16
 learning:
   initial_size: 4

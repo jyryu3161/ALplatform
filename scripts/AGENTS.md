@@ -17,7 +17,7 @@
 - 도킹은 패키지의 `DockingOracle`을 그대로 쓴다. 별도 도킹 구현을 만들지 않는다. provenance에는 실제 import된 도킹 모듈의 해시를 기록한다.
 - `prepare_receptor.py`는 `--repair-missing-atoms`가 있을 때만 PDBFixer로 누락 곁사슬·말단 원자를 재건하고 수소를 다시 붙인다(OpenMM Reference CPU 플랫폼, 시드 고정). 누락 잔기는 재건하지 않고, 체인·물·보조인자·맞지 않는 잔기를 조용히 지우지 않는다. 기존 중원자 좌표는 그대로 둔다. Meeko 준비는 `python -m meeko.cli.mk_prepare_receptor`를 `--timeout` 안에서 실행한다.
 - CPU 인자는 1–9. pH ∈ [0, 14], 시드 ∈ [1, 2³¹).
-- `verify_install.py`의 `--test`는 실제 Vina/QVina 통합 테스트가, `--test-models`는 거기에 더해 foundation 실제 추론·복원 테스트가 **skip 없이 통과**해야 성공이다. skip을 통과로 바꾸지 않는다. 검증 디렉터리는 매번 새로 만든다.
+- `verify_install.py`의 `--test`는 실제 Vina/QVina 통합 테스트가, `--test-models`는 거기에 더해 foundation 실제 추론·복원 테스트(`FOUNDATION_TESTS`: Nori·TabLDM·TabFM·TabPFN 추론·복원 + TabPFN 실제 replay 재현·홀드아웃 무관 테스트)가 **skip 없이 통과**해야 성공이다. skip을 통과로 바꾸지 않는다. 검증 디렉터리는 매번 새로 만든다. 실제 foundation 테스트 이름을 바꾸거나 추가하면 `FOUNDATION_TESTS`도 함께 고친다.
 
 ## 구현 패턴
 
@@ -28,6 +28,6 @@
 ## 테스트 지침
 
 - `tests/test_scripts.py`가 다루는 것: 모든 생성 파일의 사전 점검, 생성 경로와 입력의 별칭 충돌, 생성 경로끼리의 충돌, 디렉터리 입력 거부(평가 전), 새 아티팩트 디렉터리 안의 출력과 import된 오라클 해시 기록. 새 출력 경로를 추가하면 같은 형태의 사전 점검 테스트를 추가한다.
-- `tests/test_installation.py`가 다루는 것: 상속 CUDA 마스크, 잘못된 torch 빌드, 소형 replay 결과 검증, 실패 시 증거 보존, 요청한 통합 테스트만 활성화, 필수 통합 테스트 skip 금지, 설치기 인자·소유되지 않은 환경 거부.
+- `tests/test_installation.py`가 다루는 것: 상속 CUDA 마스크, 잘못된 torch 빌드, 소형 replay 결과 검증, 실패 시 증거 보존, 요청한 통합 테스트만 활성화, 필수 통합 테스트 skip 금지(TabPFN 실제 가중치 테스트 포함), 설치기 인자·소유되지 않은 환경 거부.
 - 수용체 준비의 반복 바이트 동일성은 자동 테스트가 아니라 수동 재생성으로 확인한 기록이다. 준비 로직을 바꾸면 같은 명령을 새 경로에 두 번 실행해 PDBQT 해시를 비교한다.
 - 실제 도킹이 필요한 경로는 `ALD_RUN_DOCKING_TESTS=1`일 때만 실행된다.

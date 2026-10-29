@@ -21,12 +21,17 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE_MODELS = ["tabm", "random_forest", "extra_trees"]
+# Real pretrained-weight tests that --test-models requires to pass without skips.
+FOUNDATION_TESTS = [*(f"test_real_public_foundation_inference_and_restore[{name}]"
+                      for name in ("nori", "tabldm", "tabfm", "tabpfn")),
+                    "test_real_tabpfn_replay_runs_are_exact_and_holdout_blind"]
 IMPORTS = {
     "numpy": ("numpy", None), "pandas": ("pandas", None), "scipy": ("scipy", None),
     "scikit-learn": ("sklearn.ensemble", "RandomForestRegressor"),
     "tabm": ("tabm", "TabM"), "rdkit": ("rdkit.Chem", "MolFromSmiles"),
     "synthefy-nori": ("synthefy_nori", "NoriRegressor"),
     "Xiaomi-TabLDM": ("tabldm", "TabLDMRegressor"), "tabfm": ("tabfm", "TabFMRegressor"),
+    "tabpfn": ("tabpfn", "TabPFNRegressor"),
     "safetensors": ("safetensors.torch", None), "vina": ("vina", "Vina"),
     "meeko": ("meeko", "MoleculePreparation"), "gemmi": ("gemmi", None),
     "pdbfixer": ("pdbfixer", "PDBFixer"), "openmm": ("openmm", "System"),
@@ -140,8 +145,7 @@ def run_tests(directory: Path, *, test_models: bool) -> dict:
     required = {"test_real_docking_reproducibility[vina]", "test_real_docking_reproducibility[qvina]",
                 "test_real_multiple_conformers_and_poses"}
     if test_models:
-        required |= {f"test_real_public_foundation_inference_and_restore[{name}]"
-                     for name in ("nori", "tabldm", "tabfm")}
+        required |= set(FOUNDATION_TESTS)
     passed = {case.attrib["name"] for case in cases if not any(
         case.find(tag) is not None for tag in ("skipped", "failure", "error"))}
     if not required <= passed:
@@ -154,7 +158,9 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--torch-backend", choices=("cpu", "cu128"), default="cpu")
     parser.add_argument("--test", action="store_true", help="Run the full test suite, including actual docking")
-    parser.add_argument("--test-models", action="store_true", help="Also test real foundation weights; implies --test")
+    parser.add_argument("--test-models", action="store_true",
+                        help="Also test real foundation weights (about 7.2 GB, including the 44 MB "
+                             "TabPFN v2 checkpoint); implies --test")
     parser.add_argument("--offline", action="store_true", help="Use only cached foundation checkpoints")
     args = parser.parse_args(argv)
     if sys.prefix == sys.base_prefix:

@@ -118,16 +118,32 @@ def test_full_suite_enables_only_requested_native_tests(verifier, tmp_path, monk
         for name in ["test_real_docking_reproducibility[vina]", "test_real_docking_reproducibility[qvina]",
                      "test_real_multiple_conformers_and_poses"]:
             ET.SubElement(suite, "testcase", name=name)
-        for backend in ("nori", "tabldm", "tabfm"):
-            case = ET.SubElement(suite, "testcase", name=f"test_real_public_foundation_inference_and_restore[{backend}]")
+        for name in verifier.FOUNDATION_TESTS:
+            case = ET.SubElement(suite, "testcase", name=name)
             if not test_models:
                 ET.SubElement(case, "skipped")
         ET.ElementTree(suite).write(tmp_path / "pytest.xml")
 
     monkeypatch.setattr(verifier, "run_logged", run)
     result = verifier.run_tests(tmp_path, test_models=test_models)
-    assert result["tests"] == 6 and result["skipped"] == (0 if test_models else 3)
+    assert result["tests"] == 8 and result["skipped"] == (0 if test_models else 5)
     assert verifier.os.environ["ALD_RUN_FOUNDATION_TESTS"] == "inherited"
+
+
+def test_model_check_requires_real_tabpfn_weight_tests(verifier, tmp_path, monkeypatch):
+    assert verifier.IMPORTS["tabpfn"] == ("tabpfn", "TabPFNRegressor")
+    assert {"test_real_public_foundation_inference_and_restore[tabpfn]",
+            "test_real_tabpfn_replay_runs_are_exact_and_holdout_blind"} <= set(verifier.FOUNDATION_TESTS)
+    suite = ET.Element("testsuite")
+    for name in ["test_real_docking_reproducibility[vina]", "test_real_docking_reproducibility[qvina]",
+                 "test_real_multiple_conformers_and_poses", *verifier.FOUNDATION_TESTS]:
+        case = ET.SubElement(suite, "testcase", name=name)
+        if name == "test_real_tabpfn_replay_runs_are_exact_and_holdout_blind":
+            ET.SubElement(case, "skipped")
+    ET.ElementTree(suite).write(tmp_path / "pytest.xml")
+    monkeypatch.setattr(verifier, "run_logged", lambda *args, **kwargs: None)
+    with pytest.raises(RuntimeError, match="test_real_tabpfn_replay_runs_are_exact_and_holdout_blind"):
+        verifier.run_tests(tmp_path, test_models=True)
 
 
 def test_required_native_tests_cannot_silently_skip(verifier, tmp_path, monkeypatch):

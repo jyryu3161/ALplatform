@@ -10,3 +10,5 @@
 | [0006](0006-hardcoded-resource-policy.md) | CPU 9개·GPU 0/1 한계를 코드에 고정 | 상한 변경은 코드 변경 + 사용자 승인 |
 | [0007](0007-isolated-docking-workers.md) | 화합물마다 격리된 자식 프로세스로 도킹 | 시간 제한·장애 격리, 워커 수와 무관한 결과 |
 | [0008](0008-ensemble-weighting.md) | 모델 평균 가중, 획득 관측 내부 분할로 검증 가중 | 홀드아웃 누출 없음, validation 전략은 비용 두 배 |
+| [0009](0009-gnina-cnnaffinity-rescoring.md) | 최저 에너지 포즈(결합 차수 SDF)를 GNINA 1.3.3 SIF로 rootless Apptainer CPU 재채점, −CNNaffinity를 라벨로 | 이전 Vina 결과와 비교 불가, 업그레이드는 코드 변경, 시간 초과는 세션 전체 SIGKILL |
+| [0010](0010-tabpfn-v2-default.md) | 기본 모델을 TabPFN v2(고정 체크포인트, 획득 전체 기준 특성 선택, 정확한 분포 표준편차)로, TabM은 선택지로 유지 | 이전 TabM 결과와 섞지 않음, TabM 미선택 시 TabM 전용 값 오류, CPU+예산 1000 초과 거부 |

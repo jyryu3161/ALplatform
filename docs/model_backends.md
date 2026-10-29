@@ -6,17 +6,18 @@ All backends predict a continuous docking score from the same molecular fingerpr
 
 ## Selecting models
 
-The canonical setting is a nonempty `model.models` list:
+The canonical setting is a nonempty `model.models` list. Omitting it selects TabPFN v2:
 
 ```yaml
 model:
-  models: [tabm]
+  models: [tabpfn]   # default
 ```
 
 The root shorthand `models: [tabm]` is also accepted. Specifying both locations is an error. Names are case-insensitive; aliases normalize to the canonical names below. Duplicate names, including aliases of the same backend, are rejected.
 
 | Canonical name | Alias | Estimator | Additional runtime |
 |---|---|---|---|
+| `tabpfn` (default) | — | `tabpfn.TabPFNRegressor` with the TabPFN v2 regression checkpoint | None (core dependency) |
 | `tabm` | `tamb` | Official `tabm.TabM` through `TabMRegressor` | None |
 | `random_forest` | `rf` | scikit-learn `RandomForestRegressor` | None |
 | `extra_trees` | `et` | scikit-learn `ExtraTreesRegressor` | None |
@@ -26,7 +27,7 @@ The root shorthand `models: [tabm]` is also accepted. Specifying both locations 
 
 `active-learning-docking models` prints supported names and installation hints without loading the optional runtimes. Selecting one backend instantiates only that model. A missing optional runtime fails with an installation hint; a requested backend is never silently replaced.
 
-Keep existing TabM training settings directly under `model`, for example `epochs`, `k`, `d_block`, and `learning_rate`. Optional `model.params.tabm` overrides those settings for TabM. Parameters for every other backend belong under `model.params.<canonical-name>`. Parameters for an unselected model are rejected. Resource and random-seed settings belong at experiment level; `device`, `seed`, `random_state`, `n_jobs`, and `cpu_threads` cannot override that policy through a backend parameter block.
+Keep existing TabM training settings directly under `model`, for example `epochs`, `k`, `d_block`, and `learning_rate`. Optional `model.params.tabm` overrides those settings for TabM. The flat fields `n_blocks`, `d_block`, `k`, `dropout`, `learning_rate`, `weight_decay`, `epochs`, `patience`, `tuning_method`, and `n_trials` are TabM-only: when `tabm` is not in `model.models`, any of them set to a non-default value fails validation with a message that it applies only to TabM. This stops an older TabM configuration from silently running the new default model. `batch_size` (the fallback prediction batch for other backends), `validation_fraction` (also the ensemble validation split), and `inference_batch_size` are shared and are not checked. Parameters for every other backend belong under `model.params.<canonical-name>`. Parameters for an unselected model are rejected. Resource and random-seed settings belong at experiment level; `device`, `seed`, `random_state`, `n_jobs`, and `cpu_threads` cannot override that policy through a backend parameter block.
 
 ## Installation and public checkpoints
 
@@ -37,11 +38,11 @@ bash install.sh
 source .venv-ald/bin/activate
 ```
 
-`bash install.sh --test-models` installs the same environment and additionally runs the full suite, native docking, and actual public-checkpoint tests for all three foundation models. The initial foundation downloads total approximately 7.2 GB; installing their runtimes alone does not download model weights. To select CUDA, use `--torch-backend cu128`; CPU PyTorch is the default. CUDA runtime packages add about 3.7 GiB (4 GB) of first-installation downloads, separately from model weights. The supported installer target is Linux x86_64 with glibc 2.28+.
+`bash install.sh --test-models` installs the same environment and additionally runs the full suite, native docking, and actual public-checkpoint tests for all four foundation models (TabPFN v2, Nori, TabLDM, TabFM). The initial foundation downloads total approximately 7.2 GB; installing their runtimes alone does not download model weights. To select CUDA, use `--torch-backend cu128`; CPU PyTorch is the default. CUDA runtime packages add about 3.7 GiB (4 GB) of first-installation downloads, separately from model weights. The supported installer target is Linux x86_64 with glibc 2.28+.
 
-The pinned default checkpoint downloads are approximately **47 MB for Nori-6M**, **569 MB for TabLDM**, and **6.59 GB for TabFM** (decimal sizes, excluding installed packages). Runtime memory also includes the loaded model and context. Public weights are cached and reused. For a small initial foundation run, select `models: [nori]`.
+The pinned default checkpoint downloads are approximately **44 MB for TabPFN v2**, **47 MB for Nori-6M**, **569 MB for TabLDM**, and **6.59 GB for TabFM** (decimal sizes, excluding installed packages). Runtime memory also includes the loaded model and context. Public weights are cached and reused.
 
-For a manual installation in your own environment, choose only the additional runtimes you need. Google TabFM requires Python 3.11+, and the TabLDM extra needs Git to install its pinned source revision:
+For a manual installation in your own environment, `python -m pip install -e .` installs TabM, the forests, and TabPFN (`tabpfn==9.2.0`); choose only the additional runtimes you need. Google TabFM requires Python 3.11+, and the TabLDM extra needs Git to install its pinned source revision:
 
 ```bash
 python -m pip install -e '.[nori]'
@@ -49,7 +50,19 @@ python -m pip install -e '.[tabldm]'
 python -m pip install -e '.[tabfm]'
 ```
 
-Manual extras can be combined, for example `python -m pip install -e '.[docking,nori,tabldm,tabfm]'`. Core TabM/tree runs remain usable without foundation packages. A run resolves and hashes selected foundation checkpoints during preflight, before docking begins; downloads use pinned Hugging Face revisions. Preserve the resolved configuration, installed dependency versions, and checkpoint metadata when comparing experiments.
+Manual extras can be combined, for example `python -m pip install -e '.[docking,nori,tabldm,tabfm]'`. TabPFN, TabM, and tree runs need no extras. A run resolves and hashes selected foundation checkpoints during preflight, before docking begins; downloads use pinned Hugging Face revisions.
+
+### TabPFN v2 (default)
+
+The adapter uses the official local `tabpfn.TabPFNRegressor` from `tabpfn==9.2.0` with only the TabPFN v2 regression checkpoint: file `tabpfn-v2-regressor.ckpt` from [`Prior-Labs/TabPFN-v2-reg`](https://huggingface.co/Prior-Labs/TabPFN-v2-reg) at revision `02a44705ff7790b50cded404bc59adb94da456a1`, SHA-256 `2ab5a07d5c41dfe6db9aa7ae106fc6de898326c2765be66505a07e2868c10736` (about 44 MB). It is downloaded with `token=False`, without an account, token, or license prompt. TabPFN 2.5 and later checkpoints are not supported. For offline use, set `model.params.tabpfn.model_path` to a local copy of that same file; it must keep the name `tabpfn-v2-regressor.ckpt` (tabpfn infers the model version from it) and the pinned SHA-256, otherwise preflight fails. `model_path: null` is the default and downloads the pinned file. The hosted `tabpfn-client` API is not used.
+
+The weights are under the **Prior Labs License 1.1** (Apache 2.0 with an attribution requirement); the `tabpfn` package itself is Apache-2.0. Apart from the pinned checkpoint download, the run makes no outbound connection: `tabpfn` 9.2.0 contains no usage-telemetry client, and while TabPFN runs, the adapter replaces tabpfn's own weight-download function with one that refuses, so the library can never fetch a different file. `tabpfn` reads `TABPFN_*` environment variables and a `.env` file in the working directory at import; the adapter pins the settings that change computation (`allow_cpu_large_dataset`, `max_batched_estimator_rows`, `max_batched_estimator_cells`) while TabPFN runs.
+
+`fit` stores the acquired examples as context; prediction conditions on that context without gradient training. Unlike the other foundation backends, features are ranked over all acquired observations before the context is sampled; see [Backend parameters](#backend-parameters). The mean is that of TabPFN's predictive distribution, and the spread is the exact standard deviation of that distribution, not a quantile approximation.
+
+Options that affect reproducibility or throughput are fixed constants rather than user settings (`fit_mode: fit_preprocessors`, `inference_precision: auto`, `memory_saving_mode: true`, `n_preprocessing_jobs: 1`, `enable_torch_compile: false`, `ignore_pretraining_limits: false`, `softmax_temperature: auto`, `average_before_softmax: false`). They are recorded in the model metadata as `fixed_upstream_options`, and loading a checkpoint saved with different values fails.
+
+TabPFN refuses CPU fitting on more than 1,000 context rows. Configurations selecting `tabpfn` (alone or in an ensemble) with `resources.device: cpu` and `learning.budget > 1000` are therefore rejected at validation, before docking begins; use `resources.device: cuda:0` or `cuda:1` (physical GPU). CPU predictions repeat exactly for the same configuration, seed, and environment. On physical GPU 1 with `resources.deterministic: true`, two identical runs produced byte-identical results, so `examples/gpu.yaml` uses TabPFN. A different GPU, driver, or PyTorch build is a separate environment. Preserve the resolved configuration, installed dependency versions, and checkpoint metadata when comparing experiments.
 
 ### Synthefy Nori
 
@@ -69,19 +82,25 @@ The PyTorch regression weights occupy approximately **6.6 GB** on disk; plan for
 
 ## Backend parameters
 
-Foundation adapters default to **2,048 acquired context rows** and **128 fingerprint features**. Rows are sampled without replacement using the experiment seed; features are selected by variance on those context rows only, with deterministic ties. Query rows and evaluation labels do not fit this selection. These caps reduce inference cost but can discard informative fingerprint bits or acquired examples. Set either cap to `null` to disable it, and evaluate that choice on your task. `max_features` also controls TabFM's native feature cap; `null` disables both. Explicit upstream context or dimensionality options can still transform or subsample the input.
+Nori, TabLDM, and TabFM default to **2,048 acquired context rows** and **128 fingerprint features**. Rows are sampled without replacement using the experiment seed; features are selected by variance on those context rows only, with deterministic ties. Query rows and evaluation labels do not fit this selection. These caps reduce inference cost but can discard informative fingerprint bits or acquired examples. Set either cap to `null` to disable it, and evaluate that choice on your task. `max_features` also controls TabFM's native feature cap; `null` disables both. Explicit upstream context or dimensionality options can still transform or subsample the input.
 
-All three foundation backends require at least two acquired context rows and at least one fingerprint bit that varies within the selected context. Identical context fingerprints fail with an actionable error before model allocation; increase the context cap or acquire more diverse molecules.
+TabPFN differs: it defaults to **10,000 context rows** and **500 features**, the TabPFN v2 limits, and `null` is rejected for both (`max_features` must be an integer 1–500, `max_context_samples` 2–10,000). At every fit it ranks fingerprint bits by population variance over **all** acquired successful observations (ties broken by the lower bit index) and keeps the top `max_features`. Only then, if more observations than `max_context_samples` exist, does it draw the seeded context sample. Context and predicted rows use the same selected columns, and query rows and evaluation labels play no part in either choice.
+
+All four foundation backends require at least two acquired context rows and at least one fingerprint bit that varies within the selected context; for TabPFN the selected bits must also vary within the sampled context. Identical context fingerprints fail with an actionable error before model allocation; increase the context cap or acquire more diverse molecules.
 
 After installing the optional extras, an ensemble with all requested foundation backends can be configured as follows:
 
 ```yaml
 model:
-  models: [tabm, nori, tabldm, tabfm]
+  models: [tabpfn, nori, tabldm, tabfm]
   inference_batch_size: 128
   ensemble:
     strategy: mean
   params:
+    tabpfn:
+      n_estimators: 8
+      max_features: 500
+      max_context_samples: 10000
     nori:
       model: nori-6m
       max_features: 128
@@ -102,7 +121,8 @@ Remove any names you do not want to run, and remove their corresponding `params`
 
 | Backend | Supported `model.params.<name>` options |
 |---|---|
-| All foundation backends | `max_features` (128), `max_context_samples` (2048); `null` disables a cap |
+| `nori`, `tabldm`, `tabfm` | `max_features` (128), `max_context_samples` (2048); `null` disables a cap |
+| `tabpfn` | `max_features` (500; integer 1–500), `max_context_samples` (10000; integer 2–10000), `n_estimators` (8), `model_path` (`null` = pinned download); `null` is rejected for both caps |
 | `nori` | `model` (`nori-6m`), `model_path`, `augmentations`, `svd_dim` |
 | `tabldm` | `model_path`, `allow_auto_download`, `checkpoint_version`, `n_estimators` (8), `batch_size`, `kv_cache`, `norm_methods`, `feat_shuffle_method`, `use_amp`, `offload_mode`, `disk_offload_dir` |
 | `tabfm` | `checkpoint_path`, `n_estimators` (8), `batch_size`, `max_num_rows`, `norm_methods` |
@@ -113,7 +133,7 @@ Values in parentheses are adapter defaults. Other omitted options retain the pin
 
 TabFM 1.0.1's PyTorch regressor does not expose a context/KV cache. `cache_context`, `maybe_quantize_kv_cache`, and `keep_cache_on_device` are rejected before loading weights. Its loader caches the pretrained model within the process, but each prediction batch computes the context representations again. The loader uses upstream's default bfloat16 compute dtype on CPU and CUDA. Smaller context and estimator counts reduce inference work.
 
-For checkpoints already on disk, set `model.params.nori.model_path`, `model.params.tabldm.model_path`, or `model.params.tabfm.checkpoint_path`. Relative paths resolve from the YAML file directory. TabLDM can disable downloads with `allow_auto_download: false`. Its `kv_cache` option accepts `false`, `true`, `kv`, or `repr`; the adapter forwards this into the upstream fit call so the requested cache is actually created. `offload_mode: disk` requires `disk_offload_dir`; that directory path also resolves from the YAML file. Feature shuffling accepts `none`, `shift`, `random`, or `latin`.
+For checkpoints already on disk, set `model.params.tabpfn.model_path`, `model.params.nori.model_path`, `model.params.tabldm.model_path`, or `model.params.tabfm.checkpoint_path`. Relative paths resolve from the YAML file directory. TabLDM can disable downloads with `allow_auto_download: false`. Its `kv_cache` option accepts `false`, `true`, `kv`, or `repr`; the adapter forwards this into the upstream fit call so the requested cache is actually created. `offload_mode: disk` requires `disk_offload_dir`; that directory path also resolves from the YAML file. Feature shuffling accepts `none`, `shift`, `random`, or `latin`.
 
 ## Ensemble protocol
 
@@ -121,7 +141,7 @@ Start with a core ensemble:
 
 ```yaml
 model:
-  models: [tabm, random_forest, extra_trees]
+  models: [tabpfn, random_forest, extra_trees]
   ensemble:
     strategy: mean
   params:
@@ -142,12 +162,15 @@ Backend spread has the following meaning:
 
 | Backend | Spread used for acquisition |
 |---|---|
+| TabPFN v2 | Exact standard deviation of its predictive distribution (zero for a constant training target) |
 | TabM | Population standard deviation across shared ensemble members |
 | Random Forest / Extra Trees | Population standard deviation across tree predictions |
 | Nori / TabLDM | Approximate standard deviation derived from predicted quantiles |
 | Google TabFM | Zero; its supported public regression API supplies point predictions |
 
 For standalone TabFM, LCB and the Gaussian Thompson heuristic therefore select by predicted mean, as greedy does. In an ensemble, disagreement with other models can still produce nonzero spread. Do not interpret zero as certainty.
+
+These quantities are not interchangeable. TabPFN's spread measures the width of a whole predictive distribution, whereas TabM's measures disagreement among parameter-sharing members; their scales differ, so the same `learning.beta` explores differently depending on the model. Set `beta` for the model actually selected and do not compare LCB/Thompson runs across models as if `beta` meant the same thing.
 
 Each selected backend receives one model weight regardless of its internal member count. The variance includes within-model spread and disagreement between model means. It remains in docking-score units after taking the square root. It is not a calibrated confidence interval or a guarantee of improved predictions.
 
@@ -185,9 +208,9 @@ This validation score is a model-selection statistic. Use the sealed evaluation 
 
 ## Resources and large pools
 
-Use `resources.device` and `resources.cpu_threads` for execution control. CPU remains the default; CUDA IDs refer to physical GPUs 0 or 1. Tree estimators run on CPU even when neural backends use CUDA. Models are fitted sequentially within the experiment's resource limits.
+Use `resources.device` and `resources.cpu_threads` for execution control. CPU remains the default; CUDA IDs refer to physical GPUs 0 or 1. TabPFN on CPU is limited to `learning.budget <= 1000` (see [TabPFN v2](#tabpfn-v2-default)); larger TabPFN runs need `cuda:0` or `cuda:1`. Tree estimators run on CPU even when neural backends use CUDA. Models are fitted sequentially within the experiment's resource limits.
 
-`model.inference_batch_size` bounds the number of pool rows passed through each prediction call. A library store keeps pool fingerprints packed on disk; acquired rows still need memory for tree fitting and foundation context. Context length, fingerprint width, checkpoint size, and the number of backend estimators can make foundation inference substantially more expensive than TabM. Check timing and memory on a representative subset before increasing the pool size. Historical TabM throughput measurements do not describe the other backends.
+`model.inference_batch_size` bounds the number of pool rows passed through each prediction call. A library store keeps pool fingerprints packed on disk; acquired rows still need memory for tree fitting and foundation context. Context length, fingerprint width, checkpoint size, and the number of backend estimators can make foundation inference substantially more expensive than TabM. Check timing and memory on a representative subset before increasing the pool size. Historical TabM throughput measurements do not describe the other backends, including the default TabPFN, whose pool prediction can be much slower than TabM's.
 
 ## Artifacts and reloading
 
@@ -197,10 +220,10 @@ The resolved configuration records canonical model names and parameters. An ense
 |---|---|---|
 | TabM | `tabm_weights.pt` and JSON metadata | Load tensor weights; existing API retained |
 | Forest | `training_data.npz` and JSON metadata | Deterministically refit the acquired training data; original scikit-learn version required |
-| Foundation | `foundation_context.npz` and JSON metadata | Recreate the estimator using saved context/features and upstream/local pretrained weights |
+| Foundation (including TabPFN) | `foundation_context.npz` and JSON metadata | Recreate the estimator using saved context/features and upstream/local pretrained weights |
 | Ensemble | Per-member directories and ensemble metadata | Restore members and the saved ensemble weights |
 
-Numeric archives are loaded without pickle and checked against saved SHA-256 hashes. Foundation checkpoints preserve selected context and feature indices. Metadata records the upstream package version, Hugging Face repository/revision, resolved checkpoint paths, and file hashes. Loading checks the runtime version and checkpoint hashes before recreating the estimator. If a public checkpoint's original cache path is missing, the loader retrieves the saved immutable revision in the current cache and verifies the original hashes. Explicit local checkpoints must be restored at their recorded paths. Preserve the runtime environment and respect weight redistribution conditions when sharing artifacts. Restoration re-creates predictions; it does not resume an interrupted docking experiment.
+Numeric archives are loaded without pickle and checked against saved SHA-256 hashes. Foundation checkpoints preserve selected context and feature indices. Metadata records the upstream package version, Hugging Face repository/revision, resolved checkpoint paths, and file hashes. Loading checks the runtime version and checkpoint hashes before recreating the estimator. A TabPFN checkpoint must additionally reference exactly the pinned `tabpfn-v2-regressor.ckpt` (name, SHA-256, repository, and revision) and the same fixed execution options; this is checked before any re-download. If a public checkpoint's original cache path is missing, the loader retrieves the saved immutable revision in the current cache and verifies the original hashes. Explicit local checkpoints must be restored at their recorded paths. Preserve the runtime environment and respect weight redistribution conditions when sharing artifacts. Restoration re-creates predictions; it does not resume an interrupted docking experiment.
 
 Use the unified loader after configuring resources:
 
@@ -217,7 +240,7 @@ model = load_regressor("results/run/model", device=runtime["device"])
 mean, spread = model.predict(X)
 ```
 
-For direct construction, import `ModelConfig` from `active_learning_docking.config` and use `create_regressor(ModelConfig(models=["tabm", "extra_trees"]), seed=42, device=runtime["device"], cpu_threads=2)` from the same regressors module, then `fit(X, y, groups=canonical_smiles)`. A loaded experiment configuration can be passed as `create_regressor(config.model, seed=config.seed, device=runtime["device"], cpu_threads=config.resources.cpu_threads)`. The standalone [TabM Python API](reference.md#api-documentation), including `TabMRegressor.load`, remains available.
+For direct construction, import `ModelConfig` from `active_learning_docking.config` and use `create_regressor(ModelConfig(models=["tabm", "extra_trees"]), seed=42, device=runtime["device"], cpu_threads=2)` from the same regressors module, then `fit(X, y, groups=canonical_smiles)`. `ModelConfig()` without `models` selects the default `["tabpfn"]`. A loaded experiment configuration can be passed as `create_regressor(config.model, seed=config.seed, device=runtime["device"], cpu_threads=config.resources.cpu_threads)`. The standalone [TabM Python API](reference.md#api-documentation), including `TabMRegressor.load`, remains available.
 
 ## Verification
 
@@ -226,24 +249,25 @@ The core suite includes adapter-contract tests using lightweight fake upstream c
 For a complete installer-driven check, run `bash install.sh --test-models`. After activating the installed environment, individual public-checkpoint tests can also be selected directly:
 
 ```bash
-# All three public foundation checkpoints: downloads missing weights.
+# All four public foundation checkpoints plus the TabPFN replay test: downloads missing weights.
 ALD_RUN_FOUNDATION_TESTS=1 python -m pytest -q tests/test_foundation.py -m foundation
 
-# Or verify one backend, for example the small Nori checkpoint.
-ALD_RUN_FOUNDATION_TESTS=1 python -m pytest -q tests/test_foundation.py -m foundation -k nori
+# Or verify one backend, for example the default TabPFN v2 checkpoint.
+ALD_RUN_FOUNDATION_TESTS=1 python -m pytest -q tests/test_foundation.py -m foundation -k tabpfn
 
 # Full active-learning loop with all four models.
 active-learning-docking run --config examples/foundation.yaml
 ```
 
-The installer saves its summary and detailed logs under `<environment>/installation-checks/<run>/`; inspect `report.json` and `pytest.xml` for the executed checks. Its `--test-models` mode requires successful Vina/QVina integration tests and all three real foundation tests, so skipped required tests cannot produce a successful verification.
+The installer saves its summary and detailed logs under `<environment>/installation-checks/<run>/`; inspect `report.json` and `pytest.xml` for the executed checks. Its `--test-models` mode requires successful Vina/QVina integration tests, all four real foundation tests, and the real TabPFN replay test, so skipped required tests cannot produce a successful verification.
 
-The real tests fit acquired context, predict finite scores/spread, and compare saved/restored predictions. They require the optional packages, access to public weights or a populated cache, and sufficient memory. Without `ALD_RUN_FOUNDATION_TESTS=1`, these tests are explicitly skipped; inspect the skip summary when reporting coverage. Run manifests record dependency versions and model metadata records the exact checkpoint files/hashes. This verifies integration behavior, not docking prediction quality.
+The real tests fit acquired context, predict finite scores/spread, and compare saved/restored predictions. The TabPFN replay test runs a standalone TabPFN replay twice and requires an exact match, checks that changing holdout labels leaves observations, predictions, training history, and saved model metadata unchanged, and runs a `[tabpfn, random_forest]` ensemble whose restored checkpoint must reproduce the exported predictions exactly. They require the optional packages, access to public weights or a populated cache, and sufficient memory. Without `ALD_RUN_FOUNDATION_TESTS=1`, these tests are explicitly skipped; inspect the skip summary when reporting coverage. Run manifests record dependency versions and model metadata records the exact checkpoint files/hashes. This verifies integration behavior, not docking prediction quality.
 
 ## Upstream sources
 
 Use the citations and licensing instructions supplied by each model's maintainers:
 
+- [TabPFN: official implementation](https://github.com/PriorLabs/TabPFN), [TabPFN v2 regression weights and Prior Labs License 1.1](https://huggingface.co/Prior-Labs/TabPFN-v2-reg), and the paper Hollmann et al., *Accurate predictions on small data with a tabular foundation model*, Nature 2025, [doi:10.1038/s41586-024-08328-6](https://doi.org/10.1038/s41586-024-08328-6)
 - [TabM: official implementation and paper](https://github.com/yandex-research/tabm)
 - [Synthefy Nori: official implementation, checkpoint links, and citation](https://github.com/Synthefy/synthefy-nori)
 - [Xiaomi TabLDM: official implementation and technical report](https://github.com/xiaomi-research/xiaomi-tabldm)

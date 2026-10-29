@@ -39,7 +39,7 @@ def _run(config: Any, root: Path, name: str) -> dict[str, Any]:
 
 
 def compare_runs(first: str | Path, second: str | Path) -> dict[str, Any]:
-    """Compare scientific records, predictions and pose bytes; exclude times/paths.
+    """Compare scientific records, predictions and pose bytes (.pdbqt, .sdf); exclude times/paths.
 
     Model serialization need not be byte-identical across backends. Saved model
     predictions are compared independently during tests. No numeric tolerance is
@@ -89,10 +89,12 @@ def compare_runs(first: str | Path, second: str | Path) -> dict[str, Any]:
             comparisons[name] = left == right
         else:
             comparisons[name] = a.read_bytes() == b.read_bytes()
-    # The verified inventories already contain byte hashes for every pose.
+    # The verified inventories already contain byte hashes for every pose
+    # (PDBQT docking poses and SDF GNINA rescoring inputs/outputs).
     # Reuse them rather than rereading potentially large checkpoint/pose files.
-    left_poses, right_poses = [{name: digest for name, digest in inventory.items() if name.endswith(".pdbqt")}
-                              for inventory in inventories]
+    left_poses, right_poses = [{name: digest for name, digest in inventory.items()
+                                if name.endswith((".pdbqt", ".sdf"))}
+                               for inventory in inventories]
     comparisons["all_pose_bytes"] = left_poses == right_poses
     return {"passed": all(comparisons.values()), "comparison": "exact", "checks": comparisons}
 

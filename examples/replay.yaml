@@ -12,11 +12,6 @@ data:
   score_column: synthetic_score
   fingerprint_bits: 256
 model:
-  n_blocks: 2
-  d_block: 32
-  k: 4
-  epochs: 12
-  patience: 4
   batch_size: 16
 learning:
   initial_size: 8

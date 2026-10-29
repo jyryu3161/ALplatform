@@ -13,17 +13,12 @@ data:
   score_column: synthetic_score
   fingerprint_bits: 128
 model:
-  models: [tabm, nori, tabldm, tabfm]
+  models: [tabpfn, nori, tabldm, tabfm]
   ensemble: {strategy: mean}
   params:
     nori: {model: nori-6m, max_features: 32, max_context_samples: 256}
     tabldm: {n_estimators: 2, max_features: 32, max_context_samples: 256}
     tabfm: {n_estimators: 2, max_features: 32, max_context_samples: 256}
-  n_blocks: 1
-  d_block: 16
-  k: 4
-  epochs: 3
-  patience: 2
   batch_size: 16
   inference_batch_size: 32
 learning:

@@ -8,6 +8,7 @@
   CUDA_VISIBLE_DEVICES=0,1 taskset -c 0,1 .venv-ald/bin/python -m pytest -q
   .venv-ald/bin/ruff check active_learning_docking tests scripts main.py unified_model.py Activedocking.py
   ```
+  검증 환경에는 잠금 파일의 `tabpfn`이 설치되어 있어야 한다(없으면 기본 모델 테스트가 실패한다).
 - **구조 변경(리팩터링, 성능 개선, 내부 표현 변경) 시 추가 필수**: 변경 전후로 번들 설정을 새 디렉터리에 실행하고 `experiments.compare_runs(변경전, 변경후)`가 `passed: true`여야 한다. 수치 허용 오차 없이 질의 순서·점수·예측·불확도·분할·지표·학습 기록·포즈 바이트가 같아야 한다.
 - **과학적 방법을 바꾸는 변경**(선택 규칙, 학습 프로토콜, 지문, 중복 제거 규칙 등)은 결과가 달라져도 되지만, 무엇이 왜 달라졌는지 커밋 메시지와 README에 적고, 그 행동을 검증하는 테스트를 추가한다. 이전 결과와 새 결과를 프로토콜 구분 없이 섞지 않는다.
 - 건너뛴(skip) 테스트를 통과로 세지 않는다. 커버리지를 보고할 때 skip 요약을 함께 확인한다.
@@ -17,11 +18,13 @@
 - 모든 계산 검증과 실험은 CPU 9개 이하, 물리 GPU 0 또는 1만 사용한다. 이 한계는 다음 위치에 하드코딩되어 있으며, 넓히려면 전부 함께 고쳐야 한다(하나라도 빠지면 그 경로만 이전 한계로 실패한다). 사용자 승인 없이 넓히지 않는다.
   - `config.ExperimentConfig.validate()` — `cpu_threads` 1–9, `gpu_ids` ⊆ {0,1}, `device` ∈ {cpu, cuda:0, cuda:1}
   - `resources.configure_resources` — 스레드 1–9, GPU ⊆ {0,1}
-  - `docking.DockingOracle` — cpu 1–9
+  - `docking.DockingOracle` — cpu 1–9 (GNINA `--cpu`도 이 값이며, GNINA는 작업 프로세스의 CPU affinity를 물려받고 GPU 없이 실행된다)
   - `store.build_library_store` — workers 1–9
   - `model.TabMRegressor`, `foundation.FoundationRegressor` — device 집합과 `CUDA_VISIBLE_DEVICES` 토큰 {0,1}
   - `scripts/prepare_receptor.py`, `scripts/build_replay.py` — `--cpu` 1–9
 - `docking.workers × docking.cpu ≤ resources.cpu_threads`. 이 조건을 우회하는 병렬화를 추가하지 않는다.
+- 자원 상한은 아니지만 장치 관련 설정 규칙이 하나 더 있다: `config.ExperimentConfig.validate()`가 `tabpfn` 선택 + `device: cpu` + `learning.budget > 1000`을 거부한다(TabPFN CPU 문맥 1000행 제한). TabPFN의 `allow_cpu_large_dataset`은 코드에서 false로 고정한다. 이 규칙을 없애려면 사용자 승인이 필요하다.
+- GNINA·Apptainer 경로는 코드에 하드코딩하지 않는다. 설정(`docking.gnina_image`, `docking.apptainer_executable`)과 테스트 환경 변수(`ALD_GNINA_IMAGE`, `ALD_APPTAINER`)로만 받는다.
 - 여러 실험을 동시에 띄울 때는 `taskset` 등으로 CPU 집합을 겹치지 않게 나눈다.
 
 ## 모듈 경계와 import
@@ -29,7 +32,7 @@
 - `config.py`, `model_registry.py`, `cli.py`의 최상위에서 numpy, pandas, torch, RDKit, scikit-learn, foundation 패키지를 import하지 않는다. 이들은 자원 설정 전에 실행되며, 위반하면 스레드·GPU 제한이 적용되지 않은 채 수치 라이브러리가 초기화된다.
 - `cli.py`는 `configure_resources`를 호출한 **다음에** `pipeline`/`store`를 import한다.
 - `pipeline.py`는 PyTorch·도킹·모델(`regressors`, `model`, `foundation`) 모듈을 각 단계 함수 안에서 import한다. 최상위 import(`store`, `data`를 통한 numpy·pandas·RDKit)를 더 늘리지 않는다.
-- 점수 출처는 오라클 객체로만 추가한다: `evaluate(cid, smiles, output_dir) -> {"score", "status": "ok"|"failed", "error", "pose"}`. 새 점수 출처를 위해 파이프라인 단계를 고치지 않고 `ActiveLearningExperiment.make_oracle`을 재정의한다.
+- 점수 출처는 오라클 객체로만 추가한다: `evaluate(cid, smiles, output_dir) -> {"score", "status": "ok"|"failed", "error", "pose"}`. 새 점수 출처를 위해 파이프라인 단계를 고치지 않고 `ActiveLearningExperiment.make_oracle`을 재정의한다. GNINA 재채점은 `DockingOracle` 안의 선택 기능이다. 파이프라인이 아는 것은 재채점 열 세 개를 관측 레코드에 옮기는 것과 `oracle.rescoring`을 매니페스트에 쓰는 것뿐이다.
 - 새 회귀 백엔드는 세 곳을 함께 고친다: `model_registry.MODEL_CATALOG`(+필요 시 `ALIASES`), `regressors._make_member`, `regressors.load_regressor`. 백엔드 객체는 `fit(X, y, groups)`, `predict(X) -> (mean, spread)`, `save(dir)`, `load(dir, device=)`, `get_model_info()`(`model_type` 포함), `history_`, `best_validation_loss_`, `train_indices_`, `validation_indices_`를 제공해야 한다. 파이프라인이 이 속성들을 직접 읽는다.
 - 백엔드 파라미터 블록에서 `device`, `seed`, `random_state`, `n_jobs`, `cpu_threads`를 받지 않는다(`ModelConfig.validate_selection`이 거부). 트리 백엔드는 `warm_start`도 거부한다.
 - 요청한 백엔드가 없으면 설치 안내와 함께 실패한다. 다른 백엔드로 조용히 대체하지 않는다. 도킹 엔진도 마찬가지로 다른 구현으로 대체하지 않는다.
@@ -39,6 +42,7 @@
 - 모든 설정은 `schema_version: 1` 데이터클래스(`config.py`)로 정의된다. 알 수 없는 키, 중복 YAML 키, 잘못된 타입, 모순된 자원 설정은 실패해야 한다. 이 엄격함을 완화하지 않는다.
 - 설정 키를 추가·변경하면 같은 커밋에서 `ExperimentConfig.validate()` 검증, `config_full.yaml`(전체 스키마 예시), README의 해당 표를 함께 고친다.
 - 경로 값(`--set` 포함)은 YAML 파일 디렉터리 기준으로 해석한다. 새 경로형 설정을 추가하면 `config.from_dict`의 경로 해석 목록에도 넣는다.
+- `tabm` 미선택 시 TabM 전용 필드(`config.TABM_ONLY_FIELDS`)가 기본값과 다르면 오류다(기본 모델이 TabPFN으로 바뀐 뒤 예전 TabM YAML이 조용히 다른 모델로 실행되지 않게 하는 사용자 결정). TabM 전용 평면 필드를 추가·삭제하면 이 목록도 함께 고친다.
 
 ## 데이터·산출물 처리
 
@@ -55,6 +59,8 @@
 
 - 패키지 의존성 범위는 `pyproject.toml`에 둔다. 설치기 잠금 파일은 `requirements/install.in`에서 uv 0.11.7로 생성하며, 각 잠금 파일 첫머리의 명령을 그대로 쓴다. 의존성을 바꾸면 CPU·cu128 잠금 파일을 둘 다 다시 생성한다. 하나만 갱신하면 두 설치 프로필의 패키지 버전이 달라진다.
 - 새 외부 라이브러리는 꼭 필요할 때만 추가하고, 추가 이유를 주석으로 남긴다.
+- `tabpfn==9.2.0`은 기본 모델 런타임이라 핵심 의존성이다(`pyproject.toml` `dependencies`, `requirements/install.in`). 추가할 때 기존 잠금 패키지 버전은 하나도 바뀌지 않았고, 이 조건은 이후 `tabpfn` 변경에도 유지한다(바뀌어야 한다면 사용자에게 보고). Python 3.10·3.12(CI)와 `constraints-tested.txt` 경로에서도 설치되어야 한다.
+- GNINA는 Python 의존성이 아니다. `install.sh`에 넣지 않고, 사용자가 공식 이미지 다이제스트에서 만든 SIF와 rootless Apptainer를 설정으로 지정한다.
 
 ## 코드 작성 규칙
 

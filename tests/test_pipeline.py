@@ -1,5 +1,6 @@
 """Real official-TabM integration tests in isolated, resource-limited processes."""
 
+import csv
 import json
 import os
 from pathlib import Path
@@ -47,7 +48,8 @@ def tiny_mapping(output, data_path=None):
         "output_dir": str(output),
         "resources": {"cpu_threads": 1, "device": "cpu", "gpu_ids": [0, 1]},
         "data": {"path": str(data_path or ROOT / "examples/replay.csv"), "score_column": "synthetic_score", "fingerprint_bits": 128},
-        "model": {"n_blocks": 1, "d_block": 16, "k": 4, "epochs": 2, "batch_size": 8, "patience": 2},
+        "model": {"models": ["tabm"], "n_blocks": 1, "d_block": 16, "k": 4, "epochs": 2, "batch_size": 8,
+                  "patience": 2},
         "learning": {"initial_size": 6, "batch_size": 4, "cycles": 4, "budget": 13},
         "evaluation": {"holdout_fraction": 0.25, "top_k": 4},
     }
@@ -321,3 +323,150 @@ def test_compatibility_entry_points_wrap_the_package_api():
     assert unified_model.UnifiedModel(n_blocks=1, d_block=8, k=2, epochs=1).model_type == "tabm"
     with pytest.raises(TypeError):
         Activedocking.ActiveLearningWithConformers({"config": "dict"})
+
+
+LEGACY_OBSERVATION_COLUMNS = ["compound_id", "smiles", "library_index", "cycle", "attempt", "score", "status",
+                              "error", "pose", "prediction_before_query", "uncertainty_before_query"]
+RESCORING_COLUMNS = ["docking_energy", "cnn_score", "cnn_affinity"]
+
+
+def fake_docking_mapping(tmp_path, name, behaviour=None):
+    """A small docking run whose engine and GNINA are the fake executables of ``tests.test_docking``."""
+    from tests.test_docking import write_fake_gnina
+
+    data = tmp_path / "candidates.csv"
+    if not data.exists():
+        pd.read_csv(ROOT / "examples/replay.csv").iloc[:10].to_csv(data, index=False)
+    receptor = tmp_path / "receptor.pdbqt"
+    receptor.write_text("ATOM      1  C   ALA A   1       1.000   2.000   3.000  1.00  0.00     0.000 C\n")
+    mapping = tiny_mapping(tmp_path / name, data)
+    mapping.update(mode="docking")
+    mapping["resources"]["cpu_threads"] = 2
+    mapping["evaluation"]["holdout_fraction"] = 0
+    mapping["learning"].update(initial_size=4, batch_size=2, cycles=1, budget=6)
+    fake = write_fake_gnina(tmp_path / f"{name}_fake", behaviour)
+    mapping["docking"] = {"receptor": str(receptor), "center": [1, 2, 3], "box_size": [10, 10, 10],
+                          "exhaustiveness": 1, "n_poses": 1, "timeout": 60, **fake}
+    return mapping, Path(fake["gnina_image"]).resolve().parent
+
+
+def test_gnina_rescoring_records_extra_columns_manifest_and_failed_rows(tmp_path):
+    probe, _ = fake_docking_mapping(tmp_path, "probe")
+    failing_id = initial_sample_ids(probe)[0]
+    mapping, fake = fake_docking_mapping(tmp_path, "rescored", {"affinity_from_name": True,
+                                                                  "by_directory": {f"{failing_id}_": "exit"}})
+    run_cli(mapping, tmp_path / "rescored.yaml")
+    output = Path(mapping["output_dir"])
+    observations = pd.read_csv(output / "observations.csv", float_precision="round_trip")
+    assert list(observations.columns) == LEGACY_OBSERVATION_COLUMNS + RESCORING_COLUMNS
+    for path in [output / "final_results.csv", *sorted(output.glob("cycle_*/queries.csv"))]:
+        assert list(pd.read_csv(path).columns) == LEGACY_OBSERVATION_COLUMNS + RESCORING_COLUMNS, path
+    assert len(list(output.glob("cycle_*/queries.csv"))) == 2
+    summary = json.loads((output / "summary.json").read_text())
+    assert (summary["attempted"], summary["successful"], summary["stop_reason"]) == (6, 5, "budget")
+    failed = observations[observations.status == "failed"]
+    assert failed.compound_id.tolist() == [failing_id]
+    assert failed[["score", *RESCORING_COLUMNS]].isna().all(axis=None)
+    assert "GNINA exited 3" in failed.error.item()
+    with (output / "observations.csv").open(newline="") as handle:
+        failed_row = next(row for row in csv.reader(handle) if row[0] == failing_id)
+    assert failed_row[-3:] == ["", "", ""] and failed_row[5] == ""
+    succeeded = observations[observations.status == "ok"]
+    assert (succeeded.score == -succeeded.cnn_affinity).all()
+    assert succeeded.score.nunique() > 1
+    assert (succeeded.docking_energy == -7.25).all() and (succeeded.cnn_score == 0.8160941601).all()
+    assert succeeded.pose.map(lambda p: Path(p).name == "rescore_pose.sdf").all()
+    final = pd.read_csv(output / "final_results.csv", float_precision="round_trip")
+    assert failing_id not in set(final.compound_id)
+    assert final.score.tolist() == sorted(final.score.tolist())
+    manifest = json.loads((output / "manifest.json").read_text())
+    assert manifest["status"] == "completed"
+    assert manifest["rescoring"] == {
+        "engine": "gnina", "image": str(fake / "gnina.sif"), "image_sha256": sha256_file(fake / "gnina.sif"),
+        "apptainer": str(fake / "apptainer"), "apptainer_version": "apptainer version 1.5.5-1",
+        "version": "gnina v1.3.3 master:6fe1ce2   Built Jun 30 2026.",
+        "cnn_model": ["dense_1_3", "dense_1_3_PT_KD_3", "crossdock_default2018_KD_4"], "input_format": "sdf"}
+    resolved = yaml.safe_load((output / "config.resolved.yaml").read_text())["docking"]
+    assert (resolved["rescoring"], resolved["gnina_image"]) == ("gnina", str(fake / "gnina.sif"))
+
+
+def test_rescoring_off_keeps_columns_manifest_requests_and_pose_files(tmp_path):
+    mapping, _ = fake_docking_mapping(tmp_path, "plain")
+    for name in ("rescoring", "gnina_image", "apptainer_executable"):
+        del mapping["docking"][name]
+    run_cli(mapping, tmp_path / "plain.yaml")
+    output = Path(mapping["output_dir"])
+    for path in [output / "observations.csv", output / "final_results.csv",
+                 *sorted(output.glob("cycle_*/queries.csv"))]:
+        assert list(pd.read_csv(path).columns) == LEGACY_OBSERVATION_COLUMNS, path
+    manifest = json.loads((output / "manifest.json").read_text())
+    assert manifest["status"] == "completed" and "rescoring" not in manifest
+    resolved = yaml.safe_load((output / "config.resolved.yaml").read_text())["docking"]
+    assert (resolved["rescoring"], resolved["gnina_image"], resolved["apptainer_executable"]) == (
+        "none", None, None)
+    assert manifest["config"]["docking"] == resolved
+    compounds = sorted(output.glob("cycle_*/poses/*"))
+    assert len(compounds) == 6
+    for directory in compounds:
+        request = json.loads((directory / "request.json").read_text())
+        assert not {"rescoring", "gnina_image", "apptainer_executable"} & set(request)
+        assert not {"rescore_pose.pdbqt", "rescore_pose.sdf", "gnina_scored.sdf", "gnina.log"} & {
+            p.name for p in directory.iterdir()}
+        assert Path(json.loads((directory / "result.json").read_text())["pose"]).name == "best_poses.pdbqt"
+
+
+def test_gnina_version_mismatch_stops_the_run_before_any_docking_budget(tmp_path):
+    mapping, fake = fake_docking_mapping(tmp_path, "mismatch",
+                                         {"version_output": "gnina v1.3.2 master:abcdef0   Built Jan 1 2026."})
+    completed = run_cli(mapping, tmp_path / "mismatch.yaml", expected=1)
+    assert "1.3.3" in completed.stderr
+    output = Path(mapping["output_dir"])
+    manifest = json.loads((output / "manifest.json").read_text())
+    assert manifest["status"] == "failed" and "1.3.3" in manifest["error"]
+    assert not list(output.glob("cycle_*")) and not (output / "observations.csv").exists()
+    assert "--score_only" not in (fake / "calls.jsonl").read_text()
+
+
+@pytest.mark.integration
+def test_real_gnina_rescoring_run_is_reproducible_and_worker_invariant(tmp_path):
+    """Dock with Vina, rescore with the pinned GNINA image; repeat and parallel runs must match."""
+    from active_learning_docking.experiments import compare_runs
+
+    if os.environ.get("ALD_RUN_DOCKING_TESTS") != "1":
+        pytest.skip("Set ALD_RUN_DOCKING_TESTS=1 to run native molecular docking")
+    image, apptainer = os.environ.get("ALD_GNINA_IMAGE"), os.environ.get("ALD_APPTAINER")
+    if not image or not apptainer:
+        pytest.skip("Set ALD_GNINA_IMAGE (GNINA 1.3.3 SIF) and ALD_APPTAINER (Apptainer executable)")
+    pytest.importorskip("vina")
+    pytest.importorskip("meeko")
+    mapping = yaml.safe_load((ROOT / "examples/docking.yaml").read_text())
+    mapping["data"]["path"] = str(ROOT / "inputs/candidates.csv")
+    mapping["docking"].update(receptor=str(ROOT / "examples/data/receptor.pdbqt"),
+                              reference_ligand=str(ROOT / "inputs/reference.pdb"), rescoring="gnina",
+                              gnina_image=image, apptainer_executable=apptainer)
+    runs = {}
+    for name, workers in (("first", 1), ("repeat", 1), ("parallel", 2)):
+        mapping["output_dir"] = str(tmp_path / name)
+        mapping["docking"]["workers"] = workers
+        path = tmp_path / f"{name}.yaml"
+        path.write_text(yaml.safe_dump(mapping), encoding="utf-8")
+        completed = subprocess.run([sys.executable, "-m", "active_learning_docking", "run", "--config", str(path)],
+                                   cwd=ROOT, capture_output=True, text=True, timeout=3600)
+        assert completed.returncode == 0, completed.stdout[-3000:] + completed.stderr[-3000:]
+        runs[name] = tmp_path / name
+    first = runs["first"]
+    observations = pd.read_csv(first / "observations.csv", float_precision="round_trip")
+    assert list(observations.columns) == LEGACY_OBSERVATION_COLUMNS + RESCORING_COLUMNS
+    succeeded = observations[observations.status == "ok"]
+    assert len(succeeded) >= 3
+    assert (succeeded.score == -succeeded.cnn_affinity).all()
+    manifest = json.loads((first / "manifest.json").read_text())
+    assert manifest["rescoring"]["version"].startswith("gnina v1.3.3 ")
+    assert len(manifest["rescoring"]["image_sha256"]) == 64
+    for other in ("repeat", "parallel"):
+        report = compare_runs(first, runs[other])
+        assert report["passed"], (other, report["checks"])
+        manifests = [json.loads((run / "manifest.json").read_text()) for run in (first, runs[other])]
+        sdf = [{k: v for k, v in m["artifact_sha256"].items() if k.endswith(".sdf")} for m in manifests]
+        assert sdf[0] and sdf[0] == sdf[1], other
+        assert manifests[0]["rescoring"] == manifests[1]["rescoring"]

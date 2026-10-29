@@ -21,12 +21,18 @@ certifi==2026.7.22
     # via
     #   httpcore
     #   httpx
+    #   requests
+    # from https://pypi.org/simple
+charset-normalizer==3.5.2
+    # via requests
     # from https://pypi.org/simple
 click==8.5.0
     # via huggingface-hub
     # from https://pypi.org/simple
 cloudpickle==3.1.2
-    # via joblib
+    # via
+    #   joblib
+    #   skrub
     # from https://pypi.org/simple
 colorlog==6.12.0
     # via optuna
@@ -40,11 +46,13 @@ cycler==0.12.1
 einops==0.8.2
     # via
     #   synthefy-nori
+    #   tabpfn
     #   xiaomi-tabldm
     # from https://pypi.org/simple
 filelock==3.32.5
     # via
     #   huggingface-hub
+    #   tabpfn
     #   torch
     # from https://pypi.org/simple
 fonttools==4.64.0
@@ -84,12 +92,14 @@ huggingface-hub==1.30.0
     # via
     #   synthefy-nori
     #   tabfm
+    #   tabpfn
     #   xiaomi-tabldm
     # from https://pypi.org/simple
 idna==3.19
     # via
     #   anyio
     #   httpx
+    #   requests
     # from https://pypi.org/simple
 iniconfig==2.3.0
     # via pytest
@@ -98,16 +108,24 @@ jaxtyping==0.2.38
     # via tabfm
     # from https://pypi.org/simple
 jinja2==3.1.6
-    # via torch
+    # via
+    #   skrub
+    #   torch
     # from https://pypi.org/simple
 joblib==1.6.0
-    # via scikit-learn
+    # via
+    #   scikit-learn
+    #   skrub
+    #   tabpfn
     # from https://pypi.org/simple
 kditransform==1.2.0
     # via synthefy-nori
     # from https://pypi.org/simple
 kiwisolver==1.5.1
     # via matplotlib
+    # from https://pypi.org/simple
+lightgbm==4.7.0
+    # via tabpfn
     # from https://pypi.org/simple
 llvmlite==0.49.0
     # via numba
@@ -121,7 +139,10 @@ markupsafe==3.0.3
     #   mako
     # from https://pypi.org/simple
 matplotlib==3.11.1
-    # via pyvinecopulib
+    # via
+    #   pyvinecopulib
+    #   skrub
+    #   tabpfn
     # from https://pypi.org/simple
 meeko==0.7.1
     # via active-learning-docking
@@ -130,7 +151,9 @@ mpmath==1.3.0
     # via sympy
     # from https://pypi.org/simple
 narwhals==2.25.0
-    # via scikit-learn
+    # via
+    #   lightgbm
+    #   scikit-learn
     # from https://pypi.org/simple
 networkx==3.6.1
     # via
@@ -147,6 +170,7 @@ numpy==2.4.6
     #   active-learning-docking
     #   contourpy
     #   kditransform
+    #   lightgbm
     #   matplotlib
     #   numba
     #   openmm
@@ -157,9 +181,11 @@ numpy==2.4.6
     #   rdkit
     #   scikit-learn
     #   scipy
+    #   skrub
     #   synthefy
     #   synthefy-nori
     #   tabfm
+    #   tabpfn
     #   vina
     #   xiaomi-tabldm
     # from https://pypi.org/simple
@@ -239,9 +265,11 @@ packaging==26.3
 pandas==2.3.3
     # via
     #   active-learning-docking
+    #   skrub
     #   synthefy
     #   synthefy-nori
     #   tabfm
+    #   tabpfn
     #   xiaomi-tabldm
     # from https://pypi.org/simple
 pathspec==1.1.1
@@ -268,14 +296,21 @@ pyarrow==25.0.1
     # from https://pypi.org/simple
 pydantic==2.13.5
     # via
+    #   pydantic-settings
     #   synthefy
     #   synthefy-nori
+    #   tabpfn
     # from https://pypi.org/simple
 pydantic-core==2.46.5
     # via pydantic
     # from https://pypi.org/simple
+pydantic-settings==2.16.2
+    # via tabpfn
+    # from https://pypi.org/simple
 pydot==4.0.1
-    # via pyvinecopulib
+    # via
+    #   pyvinecopulib
+    #   skrub
     # from https://pypi.org/simple
 pygments==2.21.0
     # via pytest
@@ -296,6 +331,9 @@ python-dateutil==2.9.0.post0
     #   matplotlib
     #   pandas
     # from https://pypi.org/simple
+python-dotenv==1.2.4
+    # via pydantic-settings
+    # from https://pypi.org/simple
 pytz==2026.3.post1
     # via pandas
     # from https://pypi.org/simple
@@ -312,6 +350,9 @@ pyyaml==6.0.3
 rdkit==2026.3.6
     # via active-learning-docking
     # from https://pypi.org/simple
+requests==2.34.2
+    # via skrub
+    # from https://pypi.org/simple
 rtdl-num-embeddings==0.0.12
     # via tabm
     # from https://pypi.org/simple
@@ -319,23 +360,30 @@ ruff==0.16.6
     # via active-learning-docking
     # from https://pypi.org/simple
 safetensors==0.8.0
-    # via active-learning-docking
+    # via
+    #   active-learning-docking
+    #   tabpfn
     # from https://pypi.org/simple
 scikit-learn==1.9.0
     # via
     #   active-learning-docking
     #   kditransform
+    #   skrub
     #   synthefy-nori
     #   tabfm
+    #   tabpfn
     #   xiaomi-tabldm
     # from https://pypi.org/simple
 scipy==1.17.1
     # via
     #   active-learning-docking
     #   kditransform
+    #   lightgbm
     #   scikit-learn
+    #   skrub
     #   synthefy-nori
     #   tabfm
+    #   tabpfn
     #   xiaomi-tabldm
     # from https://pypi.org/simple
 setuptools==80.10.2
@@ -347,6 +395,9 @@ setuptools==80.10.2
     # from https://pypi.org/simple
 six==1.17.0
     # via python-dateutil
+    # from https://pypi.org/simple
+skrub==0.10.1
+    # via tabpfn
     # from https://pypi.org/simple
 sniffio==1.3.1
     # via httpx
@@ -371,6 +422,11 @@ tabfm==1.0.1
 tabm==0.0.3
     # via active-learning-docking
     # from https://pypi.org/simple
+tabpfn==9.2.0
+    # via
+    #   -r requirements/install.in
+    #   active-learning-docking
+    # from https://pypi.org/simple
 threadpoolctl==3.6.0
     # via
     #   active-learning-docking
@@ -387,6 +443,7 @@ torch==2.8.0+cu128
     #   synthefy-nori
     #   tabfm
     #   tabm
+    #   tabpfn
     #   xiaomi-tabldm
     # from https://download.pytorch.org/whl/cu128
 tqdm==4.70.0
@@ -394,6 +451,7 @@ tqdm==4.70.0
     #   huggingface-hub
     #   optuna
     #   synthefy-nori
+    #   tabpfn
     #   xiaomi-tabldm
     # from https://pypi.org/simple
 triton==3.4.0
@@ -412,18 +470,25 @@ typing-extensions==4.16.0
     #   huggingface-hub
     #   pydantic
     #   pydantic-core
+    #   pydantic-settings
     #   sqlalchemy
     #   synthefy
     #   synthefy-nori
     #   tabm
+    #   tabpfn
     #   torch
     #   typing-inspection
     # from https://pypi.org/simple
 typing-inspection==0.4.4
-    # via pydantic
+    # via
+    #   pydantic
+    #   pydantic-settings
     # from https://pypi.org/simple
 tzdata==2026.3
     # via pandas
+    # from https://pypi.org/simple
+urllib3==2.8.0
+    # via requests
     # from https://pypi.org/simple
 vina==1.2.7
     # via active-learning-docking

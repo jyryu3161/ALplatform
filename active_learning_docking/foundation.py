@@ -4,6 +4,8 @@ Only acquired labels enter the context. Context rows are sampled reproducibly
 before variance-based feature selection; query rows never fit preprocessing.
 Nori and TabLDM expose quantile-bank spread (an approximation to predictive
 standard deviation). Google's public TabFM API exposes point estimates only.
+TabPFN v2 instead selects features over all acquired observations before
+sampling its context and reports the exact predictive-distribution std.
 """
 
 from __future__ import annotations
@@ -22,13 +24,36 @@ from typing import Any
 import numpy as np
 
 
-FOUNDATION_BACKENDS = ("nori", "tabldm", "tabfm")
-_PACKAGES = {"nori": "synthefy-nori", "tabldm": "Xiaomi-TabLDM", "tabfm": "tabfm"}
+FOUNDATION_BACKENDS = ("nori", "tabldm", "tabfm", "tabpfn")
+_PACKAGES = {"nori": "synthefy-nori", "tabldm": "Xiaomi-TabLDM", "tabfm": "tabfm", "tabpfn": "tabpfn"}
 _REPOSITORIES = {
     "nori": "https://github.com/Synthefy/synthefy-nori",
     "tabldm": "https://github.com/xiaomi-research/xiaomi-tabldm",
     "tabfm": "https://github.com/google-research/tabfm",
+    "tabpfn": "https://github.com/PriorLabs/TabPFN",
 }
+# Only the TabPFN v2 regression weights (Prior Labs License 1.1: Apache 2.0 +
+# attribution). tabpfn infers the model version from this file name.
+_TABPFN_CHECKPOINT = {
+    "repository": "Prior-Labs/TabPFN-v2-reg", "revision": "02a44705ff7790b50cded404bc59adb94da456a1",
+    "filename": "tabpfn-v2-regressor.ckpt",
+    "sha256": "2ab5a07d5c41dfe6db9aa7ae106fc6de898326c2765be66505a07e2868c10736",
+}
+# Execution options are not user settings: each affects reproducibility or
+# throughput. memory_saving_mode=True avoids the "auto" heuristic, which reads
+# free GPU memory and could change the computation between identical runs.
+# The CPU guard of TabPFN (>1000 context rows) is kept.
+_TABPFN_OPTIONS = {
+    "fit_mode": "fit_preprocessors", "inference_precision": "auto", "memory_saving_mode": True,
+    "n_preprocessing_jobs": 1, "enable_torch_compile": False, "ignore_pretraining_limits": False,
+    "softmax_temperature": "auto", "average_before_softmax": False,
+}
+# tabpfn.settings reads TABPFN_* variables and a .env file in the working
+# directory at import; these values are pinned while TabPFN runs.
+_TABPFN_SETTINGS = {
+    "allow_cpu_large_dataset": False, "max_batched_estimator_rows": None, "max_batched_estimator_cells": None,
+}
+_TABPFN_LIMITS = {"max_features": (1, 500), "max_context_samples": (2, 10000)}
 _NORI_CHECKPOINTS = {
     "nori-6m": ("Synthefy/Nori", "1aca005143362552bb56c62e110ab77767cf4f77"),
     "nori-30m": ("Synthefy/Nori-30M", "63c9f7facf9fb32c37ce3fc2fba331d524696318"),
@@ -45,6 +70,7 @@ _SUPPORTED = {
     "tabfm": {
         "checkpoint_path", "n_estimators", "batch_size", "max_num_rows", "norm_methods",
     },
+    "tabpfn": {"model_path", "n_estimators"},
 }
 
 
@@ -61,6 +87,10 @@ def validate_foundation_params(backend: str, params: dict[str, Any] | None) -> N
     unknown = set(params) - _COMMON - _SUPPORTED[backend]
     if unknown:
         raise ValueError(f"Unknown {backend} parameters: {sorted(unknown)}")
+    if backend == "tabpfn":
+        for key, (low, high) in _TABPFN_LIMITS.items():
+            if key in params and (type(params[key]) is not int or not low <= params[key] <= high):
+                raise ValueError(f"tabpfn.{key} must be an integer in [{low}, {high}]; null is not allowed")
     for key in ("max_features", "max_context_samples", "max_num_rows", "svd_dim", "n_estimators", "batch_size"):
         if key not in params:
             continue
@@ -75,6 +105,8 @@ def validate_foundation_params(backend: str, params: dict[str, Any] | None) -> N
         if key in params and type(params[key]) is not bool:
             raise ValueError(f"{backend}.{key} must be boolean")
     for key in ("model_path", "checkpoint_path", "checkpoint_version", "disk_offload_dir"):
+        if backend == "tabpfn" and key == "model_path" and params.get(key, "") is None:
+            continue  # Documented default: download the pinned public checkpoint.
         if key in params and (not isinstance(params[key], str) or not params[key].strip()):
             raise ValueError(f"{backend}.{key} must be a nonempty path/name string")
     if backend == "nori":
@@ -110,13 +142,73 @@ def validate_foundation_params(backend: str, params: dict[str, Any] | None) -> N
         raise ValueError(f"{backend} params must contain finite JSON values") from exc
 
 
+def _install_hint(backend: str) -> str:
+    """Return the installation instruction for a missing foundation runtime.
+
+    Args:
+        backend: Foundation backend name.
+
+    Returns:
+        TabPFN is a core dependency; the others are optional project extras.
+    """
+    if backend == "tabpfn":
+        return "reinstall the project's core dependencies (pip install -e ., see README)"
+    return f"install the project's '{backend}' extra (see README)"
+
+
+def _check_tabpfn_reference(reference: dict[str, Any]) -> None:
+    """Accept only the pinned TabPFN v2 regression checkpoint file.
+
+    Args:
+        reference: Checkpoint reference with ``repository``, ``revision`` and
+            one ``files`` entry holding ``path`` and ``sha256``.
+
+    Raises:
+        ValueError: If the file name, SHA-256 or Hub revision differs from the pin.
+    """
+    files = reference.get("files") or []
+    if len(files) != 1 or Path(files[0]["path"]).name != _TABPFN_CHECKPOINT["filename"]:
+        raise ValueError(f"tabpfn requires one checkpoint file named {_TABPFN_CHECKPOINT['filename']} "
+                         "(tabpfn infers the model version from this name)")
+    if files[0]["sha256"] != _TABPFN_CHECKPOINT["sha256"]:
+        raise ValueError(f"tabpfn checkpoint SHA256 {files[0]['sha256']} is not the pinned TabPFN v2 "
+                         f"regression checkpoint {_TABPFN_CHECKPOINT['sha256']}")
+    pinned = (_TABPFN_CHECKPOINT["repository"], _TABPFN_CHECKPOINT["revision"])
+    recorded = (reference.get("repository"), reference.get("revision"))
+    if recorded[0] is not None and recorded != pinned:
+        raise ValueError(f"tabpfn checkpoint repository/revision must be the pinned {pinned}")
+
+
+def _variance_ranking_key(observations: np.ndarray) -> np.ndarray:
+    """Return a per-column key ordered exactly like the population variance.
+
+    Binary fingerprints use the exact integer ``c * (n - c)`` (``n**2`` times the
+    variance, ``c`` = column count), so equal variances tie exactly and the
+    caller's stable sort keeps the lower original index. Other inputs use the
+    float64 variance.
+
+    Args:
+        observations: All acquired observation rows, shape ``(n, n_features)``.
+
+    Returns:
+        One nonnegative key per column; larger means more variable.
+    """
+    binary = observations.dtype == np.uint8 and observations.max(initial=0) <= 1
+    if observations.dtype == np.bool_ or binary:
+        counts = observations.sum(axis=0, dtype=np.int64)
+        return counts * (len(observations) - counts)
+    return observations.var(axis=0, dtype=np.float64)
+
+
 class FoundationRegressor:
     """Consistent fit/predict/save interface around the official local packages.
 
     ``max_context_samples`` bounds acquired context (default 2048), and
     ``max_features`` retains the 128 highest-variance features from that context.
-    Set either to ``None`` to retain all. Prediction materializes at most
-    ``inference_batch_size`` pool rows. No hosted client or API key is used.
+    Set either to ``None`` to retain all. TabPFN uses 10000 and 500, rejects
+    ``None`` and ranks features over all acquired observations before sampling.
+    Prediction materializes at most ``inference_batch_size`` pool rows. No
+    hosted client or API key is used.
     """
 
     CHECKPOINT_VERSION = 2
@@ -135,11 +227,13 @@ class FoundationRegressor:
         if backend == "tabfm" and sys.version_info < (3, 11):
             raise RuntimeError("Google TabFM requires Python >= 3.11; create a Python 3.11 environment")
         self.backend = self.model_type = backend
-        self.params = dict(params or {})
+        self.params = {key: value for key, value in (params or {}).items()
+                       if not (backend == "tabpfn" and key == "model_path" and value is None)}
         self.seed, self.device = seed, device
         self.cpu_threads, self.inference_batch_size = cpu_threads, inference_batch_size
-        self.max_features = self.params.get("max_features", 128)
-        self.max_context_samples = self.params.get("max_context_samples", 2048)
+        default_features, default_context = (500, 10000) if backend == "tabpfn" else (128, 2048)
+        self.max_features = self.params.get("max_features", default_features)
+        self.max_context_samples = self.params.get("max_context_samples", default_context)
         self.is_fitted = False
         self.model = None
         self.history_: list[dict[str, Any]] = []
@@ -180,12 +274,41 @@ class FoundationRegressor:
                 if devices:
                     with torch.cuda.device(devices[0]):
                         torch.cuda.manual_seed(self.seed)
-                with torch.inference_mode():
+                with torch.inference_mode(), self._pinned_upstream_state():
                     yield
         finally:
             torch.set_num_threads(previous_threads)
             np.random.set_state(numpy_state)
             random.setstate(python_state)
+
+    @contextmanager
+    def _pinned_upstream_state(self):
+        """Pin TabPFN's environment-derived settings and refuse library downloads.
+
+        Only the verified local checkpoint may be loaded; tabpfn would otherwise
+        fetch a missing file from an unpinned source. Other backends are unaffected.
+        """
+        if self.backend != "tabpfn":
+            yield
+            return
+        settings = import_module("tabpfn.settings").settings.tabpfn
+        loading = import_module("tabpfn.model_loading")
+        previous = {key: getattr(settings, key) for key in _TABPFN_SETTINGS}
+        download = loading.download_model
+
+        def refuse_download(*args, **kwargs):
+            raise RuntimeError("TabPFN attempted a weight download; only the verified pinned "
+                               "checkpoint is used")
+
+        try:
+            for key, value in _TABPFN_SETTINGS.items():
+                setattr(settings, key, value)
+            loading.download_model = refuse_download
+            yield
+        finally:
+            loading.download_model = download
+            for key, value in previous.items():
+                setattr(settings, key, value)
 
     def preflight(self) -> None:
         """Check the optional package/API and local paths before acquiring labels.
@@ -198,6 +321,7 @@ class FoundationRegressor:
             "nori": ("synthefy_nori", "NoriRegressor"),
             "tabldm": ("tabldm", "TabLDMRegressor"),
             "tabfm": ("tabfm", "TabFMRegressor"),
+            "tabpfn": ("tabpfn", "TabPFNRegressor"),
         }[self.backend]
         try:
             module = import_module(module_name)
@@ -205,10 +329,14 @@ class FoundationRegressor:
             if self.backend == "tabfm":
                 getattr(module.tabfm_v1_0_0_pytorch, "load")
                 import_module("safetensors.torch")
+            if self.backend == "tabpfn":
+                # The run pins these upstream hooks; check them before docking starts.
+                getattr(import_module("tabpfn.model_loading"), "download_model")
+                getattr(import_module("tabpfn.settings").settings, "tabpfn")
         except (ImportError, AttributeError) as exc:
             raise ImportError(
                 f"{self.backend} requires the supported local {_PACKAGES[self.backend]} package; "
-                f"install the project's '{self.backend}' extra (see README). No model fallback is used."
+                f"{_install_hint(self.backend)}. No model fallback is used."
             ) from exc
         for key in ("model_path", "checkpoint_path"):
             if key in self.params:
@@ -247,6 +375,10 @@ class FoundationRegressor:
                     repo, options.get("checkpoint_version", "checkpoints/reg_default.ckpt"),
                     revision=revision, token=False, local_files_only=not options.get("allow_auto_download", True),
                 ))
+            elif self.backend == "tabpfn":
+                repo, revision = _TABPFN_CHECKPOINT["repository"], _TABPFN_CHECKPOINT["revision"]
+                path = Path(hf_hub_download(repo, _TABPFN_CHECKPOINT["filename"], revision=revision,
+                                            token=False))
             else:
                 repo, revision = "google/tabfm-1.0.0-pytorch", "77cb9cc1b4fd3a9c77fbb9552c218200bb4dab83"
                 path = Path(snapshot_download(repo, revision=revision, token=False,
@@ -267,12 +399,15 @@ class FoundationRegressor:
         for file in files:
             if not file.is_file():
                 raise FileNotFoundError(f"{self.backend} checkpoint file does not exist: {file}")
-        self.checkpoint_reference_ = {
+        reference = {
             "path": str(path.absolute()), "repository": repo, "revision": revision,
             "files": [{"path": str(file.absolute()), "sha256": self._file_hash(file),
                        "hub_filename": (str(file).split(f"/snapshots/{revision}/", 1)[1] if repo else None)}
                       for file in files],
         }
+        if self.backend == "tabpfn":
+            _check_tabpfn_reference(reference)
+        self.checkpoint_reference_ = reference
         options[key] = self.checkpoint_reference_["path"]
         return options
 
@@ -290,6 +425,12 @@ class FoundationRegressor:
                 # Upstream's positive n_jobs erroneously expands to all CPU cores.
                 # Our enclosing runtime bounds Torch and BLAS threads instead.
                 return cls(device=self.device, random_state=self.seed, n_jobs=None, **options)
+            if self.backend == "tabpfn":
+                cls = import_module("tabpfn").TabPFNRegressor
+                # Always the hash-verified existing file, so tabpfn never downloads.
+                return cls(model_path=self.checkpoint_reference_["path"], device=self.device,
+                           random_state=self.seed, n_estimators=options.get("n_estimators", 8),
+                           **_TABPFN_OPTIONS)
             module = import_module("tabfm")
             # Google's PyTorch extra omits this required Hub loader dependency.
             # Check it before allocating the model, including direct fit callers.
@@ -304,7 +445,7 @@ class FoundationRegressor:
         except (ImportError, AttributeError) as exc:
             raise ImportError(
                 f"{self.backend} requires the supported local {_PACKAGES[self.backend]} package; "
-                f"install the project's '{self.backend}' extra (see README). No model fallback is used."
+                f"{_install_hint(self.backend)}. No model fallback is used."
             ) from exc
 
     def fit(self, X: Any, y: Any, groups: Any = None) -> FoundationRegressor:
@@ -321,17 +462,26 @@ class FoundationRegressor:
         self.n_features_in_, self.n_samples_fit_ = X.shape[1], len(X)
         count = min(len(X), self.max_context_samples or len(X))
         self.train_indices_ = np.sort(np.random.default_rng(self.seed).choice(len(X), count, replace=False))
-        context = np.asarray(X[self.train_indices_], dtype=np.float32)
-        variances = context.var(axis=0, dtype=np.float64)
+        if self.backend == "tabpfn":
+            # Rank features over every acquired observation, then sample context rows.
+            observations = np.asarray(X[:])
+            variances = _variance_ranking_key(observations)
+            context = np.asarray(observations[self.train_indices_], dtype=np.float32)
+        else:
+            context = np.asarray(X[self.train_indices_], dtype=np.float32)
+            variances = context.var(axis=0, dtype=np.float64)
+        no_variation = ValueError(
+            f"{self.backend} needs at least one varying fingerprint feature in the selected context; "
+            "increase max_context_samples/fingerprint bits or acquire more diverse molecules"
+        )
         if not np.any(variances > 0):
-            raise ValueError(
-                f"{self.backend} needs at least one varying fingerprint feature in the selected context; "
-                "increase max_context_samples/fingerprint bits or acquire more diverse molecules"
-            )
+            raise no_variation
         feature_count = min(X.shape[1], self.max_features or X.shape[1])
         # Stable sort breaks variance ties by original feature index.
         self.feature_indices_ = np.sort(np.argsort(-variances, kind="stable")[:feature_count])
         self.context_X_ = np.ascontiguousarray(context[:, self.feature_indices_])
+        if self.backend == "tabpfn" and not np.any(self.context_X_.var(axis=0, dtype=np.float64) > 0):
+            raise no_variation
         self.context_y_ = y[self.train_indices_].copy()
         self._fit_context()
         self.history_ = [{"model_type": self.backend, "n_context": count,
@@ -375,6 +525,26 @@ class FoundationRegressor:
         mean = quantiles @ weights
         return np.sqrt(((quantiles - mean[:, None]) ** 2) @ weights)
 
+    def _distribution_std(self, logits: Any, n_rows: int) -> np.ndarray:
+        """Exact TabPFN predictive standard deviation in score units.
+
+        Args:
+            logits: Aggregated bar-distribution logits from ``output_type="full"``.
+            n_rows: Number of query rows in the batch.
+
+        Returns:
+            Float64 standard deviations; zero for a constant training target.
+        """
+        import torch
+
+        if getattr(self.model, "is_constant_target_", False):
+            return np.zeros(n_rows)
+        variance = self.model.znorm_space_bardist_.variance(logits).double()
+        std = torch.sqrt(torch.clamp(variance, min=0)).cpu().numpy() * self.model.y_train_std_
+        if std.shape != (n_rows,):
+            raise RuntimeError(f"tabpfn returned a predictive distribution with invalid shape {std.shape}")
+        return std
+
     def predict(self, X: Any, return_std: bool = True):
         from .model import _features
 
@@ -398,6 +568,10 @@ class FoundationRegressor:
                         result = self.model.predict(batch, output_type=["mean", "raw_quantiles"])
                         prediction = result["mean"]
                         std[start:stop] = self._quantile_std(result["raw_quantiles"], len(batch))
+                    elif self.backend == "tabpfn":
+                        result = self.model.predict(batch, output_type="full")
+                        prediction = result["mean"]
+                        std[start:stop] = self._distribution_std(result["logits"], len(batch))
                     else:
                         prediction = self.model.predict(batch)
                     prediction = np.asarray(prediction, dtype=np.float64)
@@ -417,6 +591,7 @@ class FoundationRegressor:
             "model_type": self.backend, "implementation": {
                 "nori": "synthefy_nori.NoriRegressor", "tabldm": "tabldm.TabLDMRegressor",
                 "tabfm": "tabfm.TabFMRegressor (PyTorch)",
+                "tabpfn": "tabpfn.TabPFNRegressor (TabPFN v2 regression checkpoint)",
             }[self.backend],
             "upstream_repository": _REPOSITORIES[self.backend], "package_version": package_version,
             "implementation_revision": self._implementation_revision(),
@@ -424,15 +599,21 @@ class FoundationRegressor:
             "parameters": self.params, "seed": self.seed, "device": self.device,
             "cpu_threads": self.cpu_threads, "inference_batch_size": self.inference_batch_size,
             "max_context_samples": self.max_context_samples, "max_features": self.max_features,
-            "uncertainty": "unavailable_zero" if self.backend == "tabfm" else "quantile_bank_standard_deviation",
+            "uncertainty": {
+                "tabfm": "unavailable_zero", "tabpfn": "predictive_distribution_standard_deviation",
+            }.get(self.backend, "quantile_bank_standard_deviation"),
             "uncertainty_is_calibrated": False,
             "checkpoint_reference": self.checkpoint_reference_,
         }
+        if self.backend == "tabpfn":
+            info["fixed_upstream_options"] = {**_TABPFN_OPTIONS, "pinned_settings": _TABPFN_SETTINGS}
         if self.is_fitted:
+            selection = ("all_acquired_variance_before_context_sampling" if self.backend == "tabpfn"
+                         else "context_only_variance")
             info.update(n_features=self.n_features_in_, n_samples_fit=self.n_samples_fit_,
                         n_training=len(self.train_indices_), n_validation=0,
                         n_features_selected=len(self.feature_indices_),
-                        feature_selection="context_only_variance", context_sampling="seeded_without_replacement")
+                        feature_selection=selection, context_sampling="seeded_without_replacement")
         return info
 
     def _implementation_revision(self) -> str | None:
@@ -486,6 +667,11 @@ class FoundationRegressor:
         if not estimator.checkpoint_reference_:
             raise ValueError("Foundation checkpoint has no pretrained weight reference")
         reference = estimator.checkpoint_reference_
+        if estimator.backend == "tabpfn":
+            # Validate before any relocation download, so a changed revision is never fetched.
+            if info.get("fixed_upstream_options") != {**_TABPFN_OPTIONS, "pinned_settings": _TABPFN_SETTINGS}:
+                raise ValueError("tabpfn checkpoint was saved with different fixed execution options")
+            _check_tabpfn_reference(reference)
         # TabFM needs config and weights in one directory. If either disappeared,
         # resolve the entire public checkpoint into the current cache together.
         relocate = bool(reference.get("repository") and reference.get("revision") and
