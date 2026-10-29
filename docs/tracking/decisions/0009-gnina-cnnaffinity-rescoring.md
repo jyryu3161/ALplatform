@@ -88,6 +88,5 @@
   - 포즈당 실행 시간은 약 3.6–3.7초다. 빈 컨테이너 시작·종료만은 약 0.16초이고, 나머지는 주로 squashfuse로 SIF 안의 라이브러리를 읽는 시간으로 보인다. Docker에서는 같은 작업이 약 1.5초였다.
   - 표준 출력에는 NVIDIA 배너가 나오지 않았다(Apptainer `exec`는 이미지 엔트리포인트를 거치지 않음). 버전 확인 규칙은 그대로 적용된다.
 - **루트 디스크 사건**: 처음에는 이미 받아 둔 Docker 이미지에서 SIF를 만들려고 `docker-daemon:` 원본을 썼다. 그동안 Docker 데몬이 이미지 전체를 루트의 임시 디렉터리에 다시 써서 루트 여유 공간이 약 46 GB에서 약 10 GB까지 떨어졌다. 빌드를 중단하고 Docker 이미지(`sha256:281ab4da39cb…`, 사용하는 컨테이너 없음)를 지운 뒤 레지스트리에서 직접 SIF를 만들었다. 데몬 임시 파일이 정리된 뒤 루트 여유 공간은 약 82 GB로 돌아왔다. 다른 이미지나 컨테이너는 건드리지 않았다.
-- **`/data2`에 남은 것**: Apptainer 레이어 캐시 `/data2/home/jyryu/apptainer/cache`(약 23 GB)가 남아 있다. SIF를 다시 만들 때만 필요하다.
-- **남은 파일**: 서버에서 실행되지 않는 공식 릴리스 바이너리가 `/data/home/jyryu/opt/gnina/1.3.3/gnina.cuda12.8.static`(2 GB)에 남아 있다. 지울지는 사용자가 정한다.
+- **정리한 파일**: SIF를 만들 때 생긴 Apptainer 레이어 캐시(`/data2/home/jyryu/apptainer/cache`, 약 23 GB)와 서버에서 실행되지 않는 공식 릴리스 바이너리(`/data/home/jyryu/opt/gnina/1.3.3`, 2 GB)는 2026-10-30 사용자 결정으로 지웠다. SIF를 다시 만들면 레이어를 다시 내려받는다.
 - **라이선스**: SIF는 NVIDIA CUDA 12.6 / Ubuntu 24.04 기반 이미지에서 왔다. 실행할 때마다 NVIDIA Deep Learning Container License 배너를 출력한다.

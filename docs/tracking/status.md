@@ -33,16 +33,15 @@
 - `reproduce --config examples/replay.yaml`(CPU, TabPFN): 통과. `results/final_verification_20261029/reproduce_replay_cpu`.
 - `examples/gpu.yaml`(TabPFN) 물리 GPU 1 실행 2회: `compare_runs` 통과(검사 27개). `results/final_verification_20261029/run_gpu_cuda1_{a,b}`.
 - 번들 설정 9개 `validate` 통과, 각각 `run` 1회 완료(gpu는 cu128 환경·GPU 1, foundation은 CPU). `results/final_verification_20261029/run_*`.
-- 설치 검증(`bash install.sh --test`):
-  - CPU: `.venv-ald-verify/installation-checks/20261029T080010Z-akdjpfpn/report.json` — 통과, 테스트 640개, skip 6(실제 foundation 5: `--test-models`가 아니므로, 실제 GNINA 1: 이미지 환경 변수 없음)
-  - CUDA 12.8(물리 GPU 1): `.venv-ald-verify-cu128/installation-checks/20261029T080408Z-uu9uh4hv/report.json` — 통과, 테스트 640개, skip 6(같은 이유)
+- 설치 검증(`bash install.sh --test`, 2026-10-29). 검증용 환경은 2026-10-30 사용자 결정으로 지웠고, 그 안의 보고서도 함께 지워졌다. 아래 수치는 지우기 전에 확인한 값이다:
+  - CPU(`.venv-ald-verify`, 보고서 `20261029T080010Z-akdjpfpn`) — 통과, 테스트 640개, skip 6(실제 foundation 5: `--test-models`가 아니므로, 실제 GNINA 1: 이미지 환경 변수 없음)
+  - CUDA 12.8(물리 GPU 1, `.venv-ald-verify-cu128`, 보고서 `20261029T080408Z-uu9uh4hv`) — 통과, 테스트 640개, skip 6(같은 이유)
 - TabPFN 처리량(GPU 1, 151,432개 합성 저장소): `docs/engineering-notes.md`의 "TabPFN v2 측정 기준값", `results/tabpfn_throughput_20261029/`.
 
 이전 기록(2026-09-06, TabM 기본, `bash install.sh --test-models` 481개 skip 0)은 `.venv-ald*/installation-checks/`와 `results/model_expansion_status.json`에 남아 있다. 이 보고서들은 Git 밖(환경 디렉터리, `results/`)에만 있다.
 
 환경:
 - `.venv-ald-tabpfn`(CPU), `.venv-ald-tabpfn-cu128`: TabPFN 도입 작업에서 만든 검증 환경.
-- `.venv-ald-verify`, `.venv-ald-verify-cu128`: 위 설치 검증으로 만든 환경.
 - 사용자의 기존 `.venv-ald`, `.venv-ald-cu128`에는 `tabpfn`이 없다. 기본 설정(`models` 미지정)은 preflight에서 실패하므로 설치기를 다시 돌리거나 위 새 환경을 쓴다. 예전 환경으로 TabM을 쓰려면 `model.models: [tabm]`을 명시한다.
 - GNINA: `/data2/home/jyryu/gnina/gnina-1.3.3.sif`, Apptainer `/data2/home/jyryu/opt/apptainer/1.5.5/bin/apptainer`(설정 또는 테스트 환경 변수로 지정).
 

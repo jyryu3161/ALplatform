@@ -130,7 +130,7 @@
 
 **GNINA 이미지 준비 중 루트 디스크가 차오름**
 - 원인: 공식 Docker 이미지는 37.5 GB다. 공용 Docker 저장소(`/var/lib/docker`, 루트 파일 시스템)에 받거나, 받아 둔 이미지를 `docker-daemon:`/`docker save`로 SIF 변환하면 데몬이 이미지 전체를 루트 임시 디렉터리에 다시 쓴다(실측: 루트 여유 약 46 GB → 약 10 GB).
-- 대응: Docker를 거치지 않고 `apptainer build <sif> docker://gnina/gnina@sha256:9da3dc61…`로 레지스트리에서 직접 만든다. 그 전에 `APPTAINER_CACHEDIR`·`APPTAINER_TMPDIR`를 `/data2` 아래로 둔다(레이어 약 23.6 GB, SIF 약 18.3 GB). 이 서버의 레이어 캐시 `/data2/home/jyryu/apptainer/cache`(약 23 GB)는 SIF를 다시 만들 때만 필요하다.
+- 대응: Docker를 거치지 않고 `apptainer build <sif> docker://gnina/gnina@sha256:9da3dc61…`로 레지스트리에서 직접 만든다. 그 전에 `APPTAINER_CACHEDIR`·`APPTAINER_TMPDIR`를 `/data2` 아래로 둔다(레이어 약 23.6 GB, SIF 약 18.3 GB). 레이어 캐시는 SIF를 다시 만들 때만 필요하므로 만든 뒤 지워도 된다.
 
 **Apptainer 비특권 설치 스크립트가 `rpm2cpio`를 찾지 못함**
 - 원인: 공식 `tools/install-unprivileged.sh`는 RPM을 풀 때 `rpm2cpio`를 쓰는데 이 서버에 없다.
