@@ -15,7 +15,7 @@ SMILES → molecular fingerprints → initial docking sample
 | `replay` | A CSV containing known scores | Compare acquisition strategies with a held-out evaluation set |
 | `docking` | AutoDock Vina or a configured QVina executable; optionally −CNNaffinity from GNINA rescoring | Prepare ligands and run iterative molecular docking |
 
-[Quick start](#quick-start) · [Models and ensembles](#models-and-ensembles) · [Configuration](#configuration) · [Actual docking](#actual-docking) · [GNINA rescoring](#gnina-cnnaffinity-rescoring) · [Outputs](#outputs) · [Detailed reference](docs/reference.md)
+[Quick start](#quick-start) · [Tutorial](#tutorial-choosing-tabpfn-v2-or-tabm) · [Models and ensembles](#models-and-ensembles) · [Configuration](#configuration) · [Actual docking](#actual-docking) · [GNINA rescoring](#gnina-cnnaffinity-rescoring) · [Outputs](#outputs) · [Detailed reference](docs/reference.md)
 
 > **Protocol change.** The default model is now **TabPFN v2** (previously TabM), and docking runs with `docking.rescoring: gnina` use **−CNNaffinity** (pK units) instead of the Vina/QVina energy (kcal/mol) as the score. Bundled historical results, [examples/verification.json](examples/verification.json), and earlier `results/`/`artifacts/` were produced with TabM on Vina-energy or synthetic scores. Do not mix them with new runs without stating which protocol each run used. An existing configuration that relied on the default model selects TabM again with `model.models: [tabm]` (or `--set 'model.models=[tabm]'`); without it, any TabM-only setting in that file is now a validation error. The bundled configurations no longer carry their former TabM hyperparameters, except `config_autotune.yaml`, which still selects TabM.
 
@@ -99,6 +99,102 @@ python -m pip install -e '.[docking,tuning,dev,nori,tabldm,tabfm,prepare]'
 All seven extras are included by `bash install.sh`. For a manual CUDA setup, install the appropriate PyTorch build before the package. Runtime device selection remains in `resources.device`; requesting unavailable CUDA fails explicitly.
 
 </details>
+
+## Tutorial: choosing TabPFN v2 or TabM
+
+TabPFN v2 is the default model and TabM remains fully supported; every command and configuration below works with either. The steps use the bundled 48-compound synthetic replay, so each run finishes on a CPU in well under a minute. Commands run from the repository root with the environment activated. `output_dir` resolves relative to the configuration file (`examples/`), so `../results/…` lands in `results/`; it must name a new or empty directory.
+
+**1. Confirm both models are installed.** `active-learning-docking models` lists `tabpfn` and `tabm` among the supported models.
+
+**2. Run the default (TabPFN v2).** The first TabPFN run downloads the pinned 44 MB checkpoint.
+
+```bash
+active-learning-docking run --config examples/replay.yaml \
+  --set output_dir=../results/tutorial_tabpfn
+```
+
+**3. Run the same experiment with TabM.** Only the model list changes; seed, split, initial sample, and budget are identical, so the two runs differ only by model.
+
+```bash
+active-learning-docking run --config examples/replay.yaml \
+  --set 'model.models=[tabm]' \
+  --set output_dir=../results/tutorial_tabm
+```
+
+**4. Compare the runs.** `summary.json` records the model that ran (`models`) and the final metrics; `metrics.csv` has one row per cycle; `final_results.csv` ranks the acquired compounds.
+
+```bash
+python - <<'EOF'
+import json
+for name in ("tutorial_tabpfn", "tutorial_tabm"):
+    summary = json.load(open(f"results/{name}/summary.json"))
+    m = summary["final_metrics"]
+    print(summary["models"], "best", m["best_score"], "top-k recall", m["discovery_top_k_recall"],
+          "holdout Spearman", m["holdout_spearman"])
+EOF
+```
+
+A single seed on a toy set says little about which model is better. For a paired comparison, run `benchmark` once per model with the same seeds and strategies, then compare the `aggregate` means and sample standard deviations in each `benchmark.json`:
+
+```bash
+for model in tabpfn tabm; do
+  active-learning-docking benchmark --config examples/benchmark.yaml \
+    --set "model.models=[$model]" \
+    --output "results/benchmark_$model" --seeds 1 2 3 --strategies random lcb
+done
+```
+
+**5. Fix the choice in your own YAML.** Put the model in `model.models`. Each model has its own settings, and settings of an unselected model are rejected (TabM-only values without `tabm` fail validation).
+
+```yaml
+# TabPFN v2 (default; the model block may be omitted entirely)
+model:
+  models: [tabpfn]
+  params:
+    tabpfn:
+      max_features: 500          # top-variance fingerprint bits over all acquired compounds
+      max_context_samples: 10000 # random context sample above this many acquisitions
+      n_estimators: 8
+      model_path: null           # null = download the pinned checkpoint
+```
+
+```yaml
+# TabM
+model:
+  models: [tabm]
+  n_blocks: 2
+  d_block: 32
+  k: 4
+  epochs: 12
+  patience: 4
+  batch_size: 16
+  auto_tune: false   # true runs the seeded TabM search, as in config_autotune.yaml
+```
+
+**6. Pick the model for the run.**
+
+| Situation | Model | Why |
+|---|---|---|
+| GPU available; pools up to about 10^5–10^6 compounds | `tabpfn` | Default; no per-cycle training. Pool prediction on one L40 ran at about 60–360 compounds/s (10,000 to 1,000 context rows), i.e. about 0.8–4.6 h per cycle at 10^6 |
+| CPU only and `learning.budget` above 1000 | `tabm` (or a forest) | TabPFN on CPU is rejected above 1000 acquisitions before any docking starts |
+| Pools of about 10^7–10^8 compounds | `tabm` or a forest | TabPFN full-pool prediction extrapolates to about 77–464 h per cycle at 10^8 on one L40; TabM takes about 8 min |
+| Hyperparameter search | `tabm` | `auto_tune` tunes TabM only |
+| Reproducing runs made before TabPFN became the default | `tabm` | Earlier bundled results and `results/` were produced with TabM |
+
+TabPFN on a GPU: install the CUDA environment (`bash install.sh --torch-backend cu128 --venv .venv-ald-cu128`) and add `--set resources.device=cuda:1` (or `cuda:0`); `examples/gpu.yaml` is a ready example. Because TabPFN's spread is the standard deviation of its predictive distribution and TabM's is ensemble disagreement, tune `learning.beta` per model rather than reusing one value.
+
+**7. Docking with either model, with or without GNINA.** The model choice is independent of the score source. For example, TabM on GNINA-rescored docking scores:
+
+```bash
+active-learning-docking run --config examples/docking.yaml \
+  --set 'model.models=[tabm]' \
+  --set docking.rescoring=gnina \
+  --set docking.gnina_image=/large/disk/gnina/gnina-1.3.3.sif \
+  --set docking.apptainer_executable=/path/to/apptainer/bin/apptainer \
+  --set output_dir=../results/tutorial_docking_tabm_gnina
+```
+
+Omit the `model.models` line for TabPFN, or the three `docking.*` lines to train on the Vina energy. [GNINA rescoring](#gnina-cnnaffinity-rescoring) describes the one-time image setup.
 
 ## Models and ensembles
 
